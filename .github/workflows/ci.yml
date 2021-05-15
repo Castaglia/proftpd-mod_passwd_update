@@ -68,7 +68,7 @@ jobs:
           CC: ${{ matrix.compiler }}
         run: |
           cd proftpd
-          ./configure LIBS="-lm -lsubunit -lrt -pthread" --enable-devel=coverage --with-modules=mod_passwd_update
+          ./configure LIBS="-lm -lsubunit -lrt -pthread" --enable-devel=coverage --enable-tests --with-modules=mod_passwd_update
           make
 
       - name: Run unit tests
@@ -89,7 +89,7 @@ jobs:
         run: |
           cd proftpd
           make clean
-          ./configure LIBS="-lm -lsubunit -lrt -pthread" --enable-devel --enable-dso --enable-tests --with-shared=mod_passwd_update
+          ./configure LIBS="-lm -lsubunit -lrt -pthread" --enable-devel --enable-dso --with-shared=mod_passwd_update
           make
 
       - name: Install with shared modules
