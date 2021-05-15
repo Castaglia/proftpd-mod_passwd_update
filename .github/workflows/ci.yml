@@ -75,8 +75,8 @@ jobs:
         env:
           CC: ${{ matrix.compiler }}
         run: |
-          cd proftpd
-          make TEST_VERBOSE=1 check-api
+          cd proftpd/contrib/mod_passwd_update
+          make TEST_VERBOSE=1 check
 
       - name: Install with static modules
         run: |
@@ -96,19 +96,6 @@ jobs:
         run: |
           cd proftpd
           sudo make install
-
-      - name: Upload code coverage
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: ${{ matrix.compiler == 'gcc' }}
-        run: |
-          lcov --ignore-errors gcov,source --directory proftpd --capture --output-file coverage.info
-          # filter out system and test code
-          lcov --remove coverage.info 'tests/*' '/usr/*' --output-file coverage.info
-          # debug before upload
-          lcov --list coverage.info
-          # upload coverage info to coveralls
-          coveralls-lcov --repo-token="$COVERALLS_REPO_TOKEN" --service-name=github --service-job-id="$GITHUB_RUN_ID" --branch="$GITHUB_REF" coverage.info
 
       - name: Check HTML docs
         run: |
