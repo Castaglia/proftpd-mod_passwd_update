@@ -6,6 +6,8 @@ include $(top_srcdir)/Make.rules
 
 .SUFFIXES: .la .lo
 
+ENABLE_TESTS=@ENABLE_TESTS@
+
 SHARED_CFLAGS=-DPR_SHARED_MODULE
 SHARED_LDFLAGS=-avoid-version -export-dynamic -module
 VPATH=@srcdir@
