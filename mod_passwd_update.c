@@ -86,7 +86,7 @@ static int passwd_update_openlog(void) {
 /* usage: PasswordUpdateAlgorithms algo1 ... */
 MODRET set_passwdupdatealgos(cmd_rec *cmd) {
   register unsigned int i;
-  unsigned int algo_count, *algos, algo_count;
+  unsigned int algo_count, *algos;
   config_rec *c;
 
   if (cmd->argc-1 < 1) {
@@ -246,7 +246,6 @@ static int passwd_update_init(void) {
 
 static int passwd_update_sess_init(void) {
   config_rec *c;
-  int res;
 
   c = find_config(main_server->conf, CONF_PARAM, "PasswordUpdateEngine", FALSE);
   if (c != NULL) {
