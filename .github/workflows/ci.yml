@@ -19,13 +19,18 @@ jobs:
           - clang
 
     steps:
-      - name: Checkout source code
+      - name: Checkout ProFTPD
+        run: |
+          git clone --depth 1 https://github.com/proftpd/proftpd.git proftpd
+
+      - name: Checkout module source code
         uses: actions/checkout@v2
         with:
           path: proftpd/contrib/mod_passwd_update
 
       - name: Whitespace check
         run: |
+          cd proftpd/contrib/mod_passwd_update
           if [[ -n $(git diff --check HEAD^) ]]; then
             echo "You must remove whitespace before submitting a pull request"
             echo ""
@@ -53,10 +58,6 @@ jobs:
           # for debugging
           clang --version
           gcc --version
-
-      - name: Check out ProFTPD
-        run: |
-          git clone --depth 1 https://github.com/proftpd/proftpd.git proftpd
 
       - name: Prepare code coverage
         run: |
