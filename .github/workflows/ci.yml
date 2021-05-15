@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        compiler:
+          - gcc
+          - clang
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+
+      - name: Whitespace check
+        run: |
+          if [[ -n $(git diff --check HEAD^) ]]; then
+            echo "You must remove whitespace before submitting a pull request"
+            echo ""
+            git diff --check HEAD^
+            exit 1
+          fi
+
+      - name: Install packages
+        run: |
+          # Need to add other repos for e.g. libsodium
+          sudo apt-get update -qq
+          # for unit tests
+          sudo apt-get install -y check
+          sudo apt-get install -y libsubunit-dev
+          sudo apt-get install -y libsqlite3-dev sqlite3
+
+          # for integration/regression test
+          # for test code coverage
+          sudo apt-get install -y lcov
+          sudo gem install coveralls-lcov
+          # for HTML validation
+          sudo apt-get install -y tidy
+          # for clang
+          sudo apt-get install -y clang
+          # for debugging
+          clang --version
+          gcc --version
+
+      - name: Prepare code coverage
+        run: |
+          lcov --directory . --zerocounters
+
+      - name: Build with static modules
+        env:
+          CC: ${{ matrix.compiler }}
+        run: |
+          ./configure LIBS="-lm -lsubunit -lrt -pthread" --enable-devel=coverage --with-modules=mod_passwd_update
+          make
+
+      - name: Run unit tests
+        env:
+          CC: ${{ matrix.compiler }}
+        run: |
+          make TEST_VERBOSE=1 check-api
+
+      - name: Install with static modules
+        run: |
+          sudo make install
+
+      - name: Build with shared modules
+        env:
+          CC: ${{ matrix.compiler }}
+        run: |
+          make clean
+          ./configure LIBS="-lm -lsubunit -lrt -pthread" --enable-devel --enable-dso --enable-tests --with-shared=mod_passwd_update
+          make
+
+      - name: Install with shared modules
+        run: |
+          sudo make install
+
+      - name: Upload code coverage
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ matrix.compiler == 'gcc' }}
+        run: |
+          lcov --ignore-errors gcov,source --directory . --capture --output-file coverage.info
+          # filter out system and test code
+          lcov --remove coverage.info 'tests/*' '/usr/*' --output-file coverage.info
+          # debug before upload
+          lcov --list coverage.info
+          # upload coverage info to coveralls
+          coveralls-lcov --repo-token="$COVERALLS_REPO_TOKEN" --service-name=github --service-job-id="$GITHUB_RUN_ID" --branch="$GITHUB_REF" coverage.info
+
+      # https://github.com/google/sanitizers/wiki/AddressSanitizer
+      # https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer
+      # https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+      #
+      # NOTE: Using MemorySanitizer is desirable, but currently unusable since
+      # libcheck is not instrumented, resulting in unsuppressible false
+      # positives.
+      - name: Run unit tests under asan+lsan+ubsan
+        env:
+          ASAN_OPTIONS: abort_on_error=1,check_initialization_order=true,debug=true,detect_invalid_pointer_pairs=2,detect_leaks=1,detect_stack_use_after_return=true,strict_string_checks=true,verbosity=0
+          CC: ${{ matrix.compiler }}
+          CFLAGS: -fsanitize=address,undefined
+          LDFLAGS: -fsanitize=address,undefined
+        if: ${{ matrix.compiler == 'clang' }}
+        run: |
+          make clean
+          ./configure LIBS="-lm -lsubunit -lrt -pthread" --enable-devel --enable-tests
+          make
+          export ASAN_SYMBOLIZER_PATH=$(readlink -f $(which llvm-symbolizer-10))
+          make check-api
+
+      - name: Check HTML docs
+        run: |
+          for f in $(/bin/ls *.html); do echo "Processing $f"; tidy -errors -omit -q $f; done || exit 0
