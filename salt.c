@@ -43,7 +43,7 @@ static long next_random(long min, long max) {
   scaled = r % (max - min + 1) + min;
   return scaled;
 #else
-  return pr_random_next();
+  return pr_random_next(min, max);
 #endif /* Prior to ProFTPD 1.3.7 */
 }
 

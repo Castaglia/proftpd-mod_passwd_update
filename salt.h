@@ -28,5 +28,6 @@
 #include "mod_passwd_update.h"
 
 const char *passwd_update_get_salt(pool *p, unsigned int algo_id);
+int passwd_update_init_salt(void);
 
 #endif /* MOD_PASSWD_UPDATE_SALT_H */
