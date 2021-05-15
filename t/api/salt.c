@@ -55,18 +55,41 @@ static void tear_down(void) {
 START_TEST (salt_invalid_args_test) {
   int res;
 
+  mark_point();
   res = passwd_update_get_salt(NULL, 0);
   fail_unless(res < 0, "Failed to handle null pool");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  mark_point();
+  res = passwd_update_get_salt(p, 0);
+  fail_unless(res < 0, "Failed to handle unknown algorithm ID");
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 }
 END_TEST
 
 START_TEST (salt_sha256_test) {
+  const char *salt, *prefix = "$5$";
+
+  mark_point();
+  salt = passwd_update_get_salt(p, PASSWD_UPDATE_ALGO_SHA256);
+  fail_unless(salt != NULL, "Failed to generate SHA256 salt: %s",
+    strerror(errno));
+  fail_unless(strncmp(salt, prefix, 3) == 0,
+    "Missing expected '%s' SHA256 salt prefix", prefix);
 }
 END_TEST
 
 START_TEST (salt_sha512_test) {
+  const char *salt, *prefix = "$6$";
+
+  mark_point();
+  salt = passwd_update_get_salt(p, PASSWD_UPDATE_ALGO_SHA512);
+  fail_unless(salt != NULL, "Failed to generate SHA512 salt: %s",
+    strerror(errno));
+  fail_unless(strncmp(salt, prefix, 3) == 0,
+    "Missing expected '%s' SHA512 salt prefix", prefix);
 }
 END_TEST
 

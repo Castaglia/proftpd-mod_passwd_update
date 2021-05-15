@@ -26,6 +26,7 @@
  */
 
 #include "mod_passwd_update.h"
+#include "passwd.h"
 
 extern xaset_t *server_list;
 
@@ -85,6 +86,7 @@ static int passwd_update_openlog(void) {
 /* usage: PasswordUpdateAlgorithms algo1 ... */
 MODRET set_passwdupdatealgos(cmd_rec *cmd) {
   register unsigned int i;
+  unsigned int algo_count, *algos, algo_count;
   config_rec *c;
 
   if (cmd->argc-1 < 1) {
@@ -93,15 +95,14 @@ MODRET set_passwdupdatealgos(cmd_rec *cmd) {
 
   CHECK_CONF(cmd, CONF_ROOT|CONF_VIRTUAL|CONF_GLOBAL);
 
-  /* XXX TODO:
-   *   Currently implemented: sha512, sha256
-   *
-   * Default: PasswordUpdateAlgorithms sha512 sha256
-   *
-   * NO DES support, or MD5?
-   */
+  c = add_config_param(cmd->argv[0], 2, NULL, NULL);
+  c->argv[1] = palloc(c->pool, sizeof(unsigned int));
+
+  algo_count = cmd->argc-1;
+  algos = pcalloc(c->pool, sizeof(unsigned int) * algo_count);
+
   for (i = 1; i < cmd->argc; i++) {
-    int algo_id;
+    unsigned int algo_id;
 
     if (strcasecmp(cmd->argv[i], "sha256") == 0 ||
         strcasecmp(cmd->argv[i], "sha2-256") == 0) {
@@ -116,7 +117,12 @@ MODRET set_passwdupdatealgos(cmd_rec *cmd) {
         "unknown/unsupported PasswordUpdateAlgorithm requested: ",
         cmd->argv[i], NULL));
     }
+
+    algos[i-1] = algo_id;
   }
+
+  c->argv[0] = algos;
+  *((unsigned int *) c->argv[1]) = algo_count;
 
   return PR_HANDLED(cmd);
 }
@@ -186,16 +192,39 @@ static void passwd_update_mod_unload_ev(const void *event_data,
 
 static void passwd_update_postparse_ev(const void *event_data,
     void *user_data) {
-  register unsigned int i;
-  config_rec *c;
   server_rec *s;
+  for (s = (server_rec *) server_list->xas_list; s; s = s->next) {
+    register unsigned int i;
+    config_rec *c;
+    int engine;
+    unsigned int algo_count, *algos;
 
-  /* XXX TODO:
-   *   Iterate through list of vhosts
-   *     if PasswordUpdateEngine enabled
-   *       check list of configured vhost PasswordUpdateAlgorithms
-   *         verify that `crypt(3)` supports that algo
-   */
+    pr_signals_handle();
+
+    c = find_config(s->conf, CONF_PARAM, "PasswordUpdateEngine", FALSE);
+    if (c == NULL) {
+      continue;
+    }
+
+    engine = *((int *) c->argv[0]);
+    if (engine == FALSE) {
+      continue;
+    }
+
+    c = find_config(s->conf, CONF_PARAM, "PasswordUpdateAlgorithms", FALSE);
+    if (c == NULL) {
+      continue;
+    }
+
+    algos = c->argv[0];
+    algo_count = *((unsigned int *) c->argv[1]);
+
+    for (i = 0; i < algo_count; i++) {
+      /* XXX TODO:
+       *  verify that `crypt(3)` supports that algo
+       */
+    }
+  }
 }
 
 /* Initialization routines

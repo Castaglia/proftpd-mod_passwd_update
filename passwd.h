@@ -33,12 +33,6 @@
 const char *passwd_update_get_hash(pool *p, const char *plaintext,
   unsigned int algo_id);
 
-/* Verify that the given hash is properly supported by the system library, as
- * the given expected algorithm.
- */
-int passwd_update_hash_is_usable(pool *p, const char *hash,
-  unsigned int algo_id);
-
 /* Generate the text line to add to a passwd(5) formatted file, such as an
  * AuthUserFile, from the given passwd struct.
  */

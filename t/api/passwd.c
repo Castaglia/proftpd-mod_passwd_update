@@ -52,11 +52,88 @@ static void tear_down(void) {
   }
 }
 
-START_TEST (passwd_is_usable_test) {
+START_TEST (passwd_get_hash_test) {
+  const char *hash, *plaintext;
+
+  mark_point();
+  hash = passwd_update_get_hash(NULL, NULL, 0);
+  fail_unless(hash == NULL, "Failed to handle null pool");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  mark_point();
+  hash = passwd_update_get_hash(p, NULL, 0);
+  fail_unless(hash == NULL, "Failed to handle null plaintext");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  plaintext = "password";
+
+  mark_point();
+  hash = passwd_update_get_hash(p, plaintext, 0);
+  fail_unless(hash == NULL, "Failed to handle unknown algorithm ID");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  mark_point();
+  hash = passwd_update_get_hash(p, plaintext, PASSWD_UPDATE_ALGO_SHA256);
+  fail_unless(hash != NULL, "Failed to get SHA256 password hash: %s",
+    strerror(errno));
+
+  mark_point();
+  hash = passwd_update_get_hash(p, plaintext, PASSWD_UPDATE_ALGO_SHA512);
+  fail_unless(hash != NULL, "Failed to get SHA512 password hash: %s",
+    strerror(errno));
 }
 END_TEST
 
 START_TEST (passwd_to_text_test) {
+  const char *text;
+  struct passwd pwd;
+
+  mark_point();
+  text = passwd_update_to_text(NULL, NULL);
+  fail_unless(text == NULL, "Failed to handle null pool");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  mark_point();
+  text = passwd_update_to_text(p, NULL);
+  fail_unless(text == NULL, "Failed to handle null passwd");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  memset(&pwd, 0, sizeof(pwd));
+
+  mark_point();
+  text = passwd_update_to_text(p, &pwd);
+  fail_unless(text == NULL, "Failed to handle null pw_name");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  pwd.pw_name = "test";
+
+  mark_point();
+  text = passwd_update_to_text(p, &pwd);
+  fail_unless(text == NULL, "Failed to handle null pw_passwd");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  /* All other fields are largely optional. */
+
+  pwd.pw_passwd = "enterpasswordhashhere";
+  pwd.pw_uid = 1;
+  pwd.pw_gid = 1;
+  pwd.pw_dir = "/home/test";
+  pwd.pw_shell = "/bin/bash";
+
+  expected = "test:enterpasswordhashhere:1:1::/home/test:/bin/bash";
+
+  mark_point();
+  text = passwd_update_to_text(p, &pwd);
+  fail_unless(text != NULL, "Failed to handle pwd: %s", strerror(errno));
+  fail_unless(strcmp(text, expected) == 0, "Expected '%s', got '%s'",
+    expected, text);
 }
 END_TEST
 
@@ -69,7 +146,7 @@ Suite *tests_get_passwd_suite(void) {
 
   tcase_add_checked_fixture(testcase, set_up, tear_down);
 
-  tcase_add_test(testcase, passwd_is_usable_test);
+  tcase_add_test(testcase, passwd_get_hash_test);
   tcase_add_test(testcase, passwd_to_text_test);
 
   suite_add_tcase(suite, testcase);
