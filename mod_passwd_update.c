@@ -136,6 +136,9 @@ MODRET set_passwdupdatealgos(cmd_rec *cmd) {
                strcasecmp(cmd->argv[i], "sha2-512") == 0) {
       algo_id = PASSWD_UPDATE_ALGO_SHA512;
 
+    } else if (strcasecmp(cmd->argv[i], "des") == 0) {
+      algo_id = PASSWD_UPDATE_ALGO_DES;
+
     } else {
       CONF_ERROR(cmd, pstrcat(cmd->tmp_pool,
         "unknown/unsupported PasswordUpdateAlgorithm requested: ",
@@ -337,7 +340,7 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
    * updated entry to the new AuthUserFile.
    */
 
-  c = find_config(main_server->conf, CONF_PARAM, "PasswordUpateAlgorithms",
+  c = find_config(main_server->conf, CONF_PARAM, "PasswordUpdateAlgorithms",
     FALSE);
   if (c != NULL) {
     algos = c->argv[0];
@@ -347,7 +350,7 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
     algo_count = 2;
     algos = palloc(cmd->tmp_pool, sizeof(unsigned int) * algo_count);
     algos[0] = PASSWD_UPDATE_ALGO_SHA512;
-    algos[2] = PASSWD_UPDATE_ALGO_SHA256;
+    algos[1] = PASSWD_UPDATE_ALGO_SHA256;
   }
 
   for (i = 0; i < algo_count; i++) {
@@ -429,10 +432,8 @@ static void passwd_update_postparse_ev(const void *event_data,
   tmp_pool = make_sub_pool(passwd_update_pool);
 
   for (s = (server_rec *) server_list->xas_list; s; s = s->next) {
-    register unsigned int i;
     config_rec *c;
     int engine;
-    unsigned int algo_count, *algos;
 
     pr_signals_handle();
 
@@ -447,24 +448,25 @@ static void passwd_update_postparse_ev(const void *event_data,
     }
 
     c = find_config(s->conf, CONF_PARAM, "PasswordUpdateAlgorithms", FALSE);
-    if (c == NULL) {
-      continue;
-    }
+    if (c != NULL) {
+      register unsigned int i;
+      unsigned int algo_count, *algos;
 
-    algos = c->argv[0];
-    algo_count = *((unsigned int *) c->argv[1]);
+      algos = c->argv[0];
+      algo_count = *((unsigned int *) c->argv[1]);
 
-    for (i = 0; i < algo_count; i++) {
-      unsigned int algo_id;
-      const char *text;
+      for (i = 0; i < algo_count; i++) {
+        unsigned int algo_id;
+        const char *text;
 
-      algo_id = algos[i];
-      text = passwd_update_get_hash(tmp_pool, "test", algo_id);
-      if (text == NULL) {
-        pr_trace_msg(trace_channel, 3, "error getting updated %s hash: %s",
-          get_algo_name(algo_id), strerror(errno));
-        pr_log_pri(PR_LOG_NOTICE, MOD_PASSWD_UPDATE_VERSION
-          ": crypt(3) does not support %s algorithm", get_algo_name(algo_id));
+        algo_id = algos[i];
+        text = passwd_update_get_hash(tmp_pool, "test", algo_id);
+        if (text == NULL) {
+          pr_trace_msg(trace_channel, 3, "error getting updated %s hash: %s",
+            get_algo_name(algo_id), strerror(errno));
+          pr_log_pri(PR_LOG_NOTICE, MOD_PASSWD_UPDATE_VERSION
+            ": crypt(3) does not support %s algorithm", get_algo_name(algo_id));
+        }
       }
     }
   }

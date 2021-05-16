@@ -27,6 +27,9 @@
 
 static const char *trace_channel = "passwd_update.salt";
 
+static const char *des_salt_text = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+static size_t des_salt_textlen = 64;
+
 static const char *salt_text = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 static size_t salt_textlen = 62;
 
@@ -66,10 +69,10 @@ const char *passwd_update_get_salt(pool *p, unsigned int algo_id) {
       salt[1] = '5';
       salt[2] = '$';
 
-      for (i = 3; i < salt_len; i++) {
+      for (i = 3; i < salt_len-1; i++) {
         long idx;
 
-        idx = next_random(0, salt_textlen);
+        idx = next_random(0, salt_textlen-1);
         salt[i] = salt_text[idx];
       }
 
@@ -85,14 +88,30 @@ const char *passwd_update_get_salt(pool *p, unsigned int algo_id) {
       salt[1] = '6';
       salt[2] = '$';
 
-      for (i = 3; i < salt_len; i++) {
+      for (i = 3; i < salt_len-1; i++) {
         long idx;
 
-        idx = next_random(0, salt_textlen);
+        idx = next_random(0, salt_textlen-1);
         salt[i] = salt_text[idx];
       }
 
       pr_trace_msg(trace_channel, 19, "generated SHA512 salt: '%s'", salt);
+      break;
+    }
+
+    case PASSWD_UPDATE_ALGO_DES: {
+      /* DES salts are two characters. */
+      salt_len = 3;
+      salt = pcalloc(p, salt_len);
+
+      for (i = 0; i < salt_len-1; i++) {
+        long idx;
+
+        idx = next_random(0, des_salt_textlen-1);
+        salt[i] = des_salt_text[idx];
+      }
+
+      pr_trace_msg(trace_channel, 19, "generated DES salt: '%s'", salt);
       break;
     }
 

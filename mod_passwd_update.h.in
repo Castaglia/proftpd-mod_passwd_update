@@ -40,6 +40,7 @@
 #define PASSWD_UPDATE_ALGO_UNKNOWN	0
 #define PASSWD_UPDATE_ALGO_SHA256	1
 #define PASSWD_UPDATE_ALGO_SHA512	2
+#define PASSWD_UPDATE_ALGO_DES		3
 
 /* Miscellaneous */
 extern int passwd_update_logfd;

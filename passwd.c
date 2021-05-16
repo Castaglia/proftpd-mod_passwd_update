@@ -51,6 +51,9 @@ static int hash_is_usable(pool *p, const char *hash, unsigned int algo_id) {
       }
       break;
 
+    case PASSWD_UPDATE_ALGO_DES:
+      break;
+
     default:
       errno = EINVAL;
       res = -1;
@@ -89,7 +92,7 @@ const char *passwd_update_get_hash(pool *p, const char *plaintext,
     return NULL;
   }
 
-  return hash;
+  return pstrdup(p, hash);
 }
 
 /* Borrowed from mod_auth_file.'s af_getpasswd(). */
@@ -136,8 +139,8 @@ struct passwd *passwd_update_from_text(pool *p, const char *text,
   }
 
   pwd = pcalloc(p, sizeof(struct passwd));
-  pwd->pw_name = fields[0];
-  pwd->pw_passwd = fields[1];
+  pwd->pw_name = pstrdup(p, fields[0]);
+  pwd->pw_passwd = pstrdup(p, fields[1]);
 
   if (*fields[2] == '\0' ||
       *fields[3] == '\0') {

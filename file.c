@@ -77,6 +77,9 @@ struct passwd *passwd_update_file_get_entry(pool *p, pr_fh_t *fh,
     if (strcmp(pwd->pw_name, user) == 0) {
       break;
     }
+
+    /* Not this entry; keep looking. */
+    pwd = NULL;
   }
 
   if (pwd == NULL) {

@@ -82,6 +82,16 @@ START_TEST (salt_sha256_test) {
 END_TEST
 
 START_TEST (salt_sha512_test) {
+  const char *salt;
+
+  mark_point();
+  salt = passwd_update_get_salt(p, PASSWD_UPDATE_ALGO_DES);
+  fail_unless(salt != NULL, "Failed to generate DES salt: %s",
+    strerror(errno));
+}
+END_TEST
+
+START_TEST (salt_des_test) {
   const char *salt, *prefix = "$6$";
 
   mark_point();
@@ -105,6 +115,7 @@ Suite *tests_get_salt_suite(void) {
   tcase_add_test(testcase, salt_invalid_args_test);
   tcase_add_test(testcase, salt_sha256_test);
   tcase_add_test(testcase, salt_sha512_test);
+  tcase_add_test(testcase, salt_des_test);
 
   suite_add_tcase(suite, testcase);
   return suite;
