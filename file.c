@@ -43,7 +43,7 @@ struct passwd *passwd_update_file_get_entry(pool *p, pr_fh_t *fh,
   }
 
   if (flags & PASSWD_UPDATE_FILE_FL_USE_LOCK) {
-    res = passwd_update_lock_rlock(p, PR_FH_FD(fh));
+    res = passwd_update_rlock(p, PR_FH_FD(fh));
     if (res < 0) {
       return NULL;
     }
@@ -81,7 +81,7 @@ struct passwd *passwd_update_file_get_entry(pool *p, pr_fh_t *fh,
 
   if (pwd == NULL) {
     if (flags & PASSWD_UPDATE_FILE_FL_USE_LOCK) {
-      (void) passwd_update_lock_ulock(p, PR_FH_FD(fh));
+      (void) passwd_update_ulock(p, PR_FH_FD(fh));
     }
 
     errno = ENOENT;
@@ -89,7 +89,7 @@ struct passwd *passwd_update_file_get_entry(pool *p, pr_fh_t *fh,
   }
 
   if (flags & PASSWD_UPDATE_FILE_FL_USE_LOCK) {
-    (void) passwd_update_lock_ulock(p, PR_FH_FD(fh));
+    (void) passwd_update_ulock(p, PR_FH_FD(fh));
   }
 
   return pwd;
@@ -118,7 +118,7 @@ int passwd_update_file_add_entry(pool *p, pr_fh_t *fh, struct passwd *pwd) {
   text = pstrcat(p, text, "\n", NULL);
   text_len = strlen(text);
 
-  res = passwd_update_lock_wlock(p, PR_FH_FD(fh));
+  res = passwd_update_wlock(p, PR_FH_FD(fh));
   if (res < 0) {
     return -1;
   }
@@ -130,9 +130,9 @@ int passwd_update_file_add_entry(pool *p, pr_fh_t *fh, struct passwd *pwd) {
     int xerrno = errno;
 
     pr_trace_msg(trace_channel, 3, "error checking fd %d (%s): %s",
-      PR_FH_FD(fh), fh->path, strerror(xerrno));
+      PR_FH_FD(fh), fh->fh_path, strerror(xerrno));
 
-    (void) passwd_update_lock_ulock(p, PR_FH_FD(fh));
+    (void) passwd_update_ulock(p, PR_FH_FD(fh));
     errno = xerrno;
     return -1;
   }
@@ -142,9 +142,9 @@ int passwd_update_file_add_entry(pool *p, pr_fh_t *fh, struct passwd *pwd) {
     int xerrno = errno;
 
     pr_trace_msg(trace_channel, 3, "error writing %lu bytes to fd %d (%s): %s",
-      (unsigned long) text_len, PR_FH_FD(fh), fh->path, strerror(xerrno));
+      (unsigned long) text_len, PR_FH_FD(fh), fh->fh_path, strerror(xerrno));
 
-    (void) passwd_update_lock_ulock(p, PR_FH_FD(fh));
+    (void) passwd_update_ulock(p, PR_FH_FD(fh));
     errno = xerrno;
     return -1;
   }
@@ -156,6 +156,6 @@ int passwd_update_file_add_entry(pool *p, pr_fh_t *fh, struct passwd *pwd) {
       PR_FH_FD(fh), fh->fh_path, strerror(errno));
   }
 
-  (void) passwd_update_lock_ulock(p, PR_FH_FD(fh));
+  (void) passwd_update_ulock(p, PR_FH_FD(fh));
   return 0;
 }

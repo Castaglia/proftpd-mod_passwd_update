@@ -31,6 +31,6 @@ struct passwd *passwd_update_file_get_entry(pool *p, pr_fh_t *fh,
   const char *user, int flags);
 #define PASSWD_UPDATE_FILE_FL_USE_LOCK	0x001
 
-int passwd_update_file_add_entry(pool *p, struct passwd *pwd);
+int passwd_update_file_add_entry(pool *p, pr_fh_t *fh, struct passwd *pwd);
 
 #endif /* MOD_PASSWD_UPDATE_FILE_H */
