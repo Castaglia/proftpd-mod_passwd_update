@@ -42,6 +42,26 @@ static const char *passwd_update_new_auth_user_file = NULL;
 
 static const char *trace_channel = "passwd_update";
 
+static const char *get_algo_name(unsigned int algo_id) {
+  const char *text;
+
+  switch (algo_id) {
+    case PASSWD_UPDATE_ALGO_SHA256:
+      text = "SHA256";
+      break;
+
+    case PASSWD_UPDATE_ALGO_SHA512:
+      text = "SHA512";
+      break;
+
+    default:
+      text = "(unknown/unsupported)";
+      break;
+  }
+
+  return text;
+}
+
 static int passwd_update_openlog(void) {
   int res = 0;
   config_rec *c;
@@ -201,7 +221,7 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
   unsigned char *authenticated;
   config_rec *c;
   pr_fh_t *fh;
-  int flags, xerrno;
+  int flags, res, xerrno;
   struct passwd *pwd;
   unsigned int algo_count, *algos;
 
@@ -346,7 +366,7 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
     return PR_DECLINED(cmd);
   }
 
-  pwd->pw_passwd = text;
+  pwd->pw_passwd = (char *) text;
 
   PRIVS_ROOT
   fh = pr_fsio_open(passwd_update_new_auth_user_file, O_WRONLY);
@@ -404,6 +424,10 @@ static void passwd_update_mod_unload_ev(const void *event_data,
 static void passwd_update_postparse_ev(const void *event_data,
     void *user_data) {
   server_rec *s;
+  pool *tmp_pool;
+
+  tmp_pool = make_sub_pool(passwd_update_pool);
+
   for (s = (server_rec *) server_list->xas_list; s; s = s->next) {
     register unsigned int i;
     config_rec *c;
@@ -431,11 +455,21 @@ static void passwd_update_postparse_ev(const void *event_data,
     algo_count = *((unsigned int *) c->argv[1]);
 
     for (i = 0; i < algo_count; i++) {
-      /* XXX TODO:
-       *  verify that `crypt(3)` supports that algo
-       */
+      unsigned int algo_id;
+      const char *text;
+
+      algo_id = algos[i];
+      text = passwd_update_get_hash(tmp_pool, "test", algo_id);
+      if (text == NULL) {
+        pr_trace_msg(trace_channel, 3, "error getting updated %s hash: %s",
+          get_algo_name(algo_id), strerror(errno));
+        pr_log_pri(PR_LOG_NOTICE, MOD_PASSWD_UPDATE_VERSION
+          ": crypt(3) does not support %s algorithm", get_algo_name(algo_id));
+      }
     }
   }
+
+  destroy_pool(tmp_pool);
 }
 
 /* Initialization routines
