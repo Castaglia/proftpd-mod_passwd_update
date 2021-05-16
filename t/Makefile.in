@@ -30,6 +30,7 @@ TEST_API_DEPS=\
   $(top_srcdir)/src/parser.o \
   $(top_srcdir)/src/netaddr.o \
   $(top_srcdir)/src/fsio.o \
+  $(top_srcdir)/src/inet.o \
   $(top_srcdir)/src/auth.o \
   $(top_srcdir)/src/env.o \
   $(top_srcdir)/src/trace.o \
