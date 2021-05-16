@@ -40,6 +40,20 @@ int passwd_update_logfd = -1;
 module passwd_update_module;
 pool *passwd_update_pool = NULL;
 
+void pr_log_auth(int priority, const char *fmt, ...) {
+  if (getenv("TEST_VERBOSE") != NULL) {
+    va_list msg;
+
+    fprintf(stderr, "AUTH: ");
+
+    va_start(msg, fmt);
+    vfprintf(stderr, fmt, msg);
+    va_end(msg);
+
+    fprintf(stderr, "\n");
+  }
+}
+
 void pr_log_debug(int level, const char *fmt, ...) {
   if (getenv("TEST_VERBOSE") != NULL) {
     va_list msg;
@@ -122,6 +136,13 @@ int pr_log_writefile(int fd, const char *name, const char *fmt, ...) {
   }
 
   return 0;
+}
+
+void pr_session_disconnect(module *m, int reason_code, const char *details) {
+}
+
+const char *pr_session_get_protocol(int flags) {
+  return "ftp";
 }
 
 void pr_signals_handle(void) {
