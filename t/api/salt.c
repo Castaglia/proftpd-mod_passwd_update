@@ -53,17 +53,17 @@ static void tear_down(void) {
 }
 
 START_TEST (salt_invalid_args_test) {
-  int res;
+  const char *salt;
 
   mark_point();
-  res = passwd_update_get_salt(NULL, 0);
-  fail_unless(res < 0, "Failed to handle null pool");
+  salt = passwd_update_get_salt(NULL, 0);
+  fail_unless(salt == NULL, "Failed to handle null pool");
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
-  res = passwd_update_get_salt(p, 0);
-  fail_unless(res < 0, "Failed to handle unknown algorithm ID");
+  salt = passwd_update_get_salt(p, 0);
+  fail_unless(salt == NULL, "Failed to handle unknown algorithm ID");
   fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 }

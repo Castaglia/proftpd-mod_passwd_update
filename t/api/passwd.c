@@ -88,7 +88,7 @@ START_TEST (passwd_get_hash_test) {
 END_TEST
 
 START_TEST (passwd_to_text_test) {
-  const char *text;
+  const char *text, *expected;
   struct passwd pwd;
 
   mark_point();
