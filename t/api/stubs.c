@@ -40,6 +40,26 @@ int passwd_update_logfd = -1;
 module passwd_update_module;
 pool *passwd_update_pool = NULL;
 
+int pr_config_get_server_xfer_bufsz(int direction) {
+  int bufsz = -1;
+
+  switch (direction) {
+    case PR_NETIO_IO_RD:
+      bufsz = PR_TUNABLE_DEFAULT_RCVBUFSZ;
+      break;
+
+    case PR_NETIO_IO_WR:
+      bufsz = PR_TUNABLE_DEFAULT_SNDBUFSZ;
+      break;
+
+    default:
+      errno = EINVAL;
+      return -1;
+  }
+
+  return bufsz;
+}
+
 void pr_log_auth(int priority, const char *fmt, ...) {
   if (getenv("TEST_VERBOSE") != NULL) {
     va_list msg;
