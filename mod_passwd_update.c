@@ -27,6 +27,7 @@
 
 #include "mod_passwd_update.h"
 #include "passwd.h"
+#include "file.h"
 
 extern xaset_t *server_list;
 
@@ -195,9 +196,14 @@ MODRET set_passwdupdatelog(cmd_rec *cmd) {
  */
 
 MODRET passwd_update_pre_pass(cmd_rec *cmd) {
-  const char *user;
+  register unsigned int i;
+  const char *user, *text;
   unsigned char *authenticated;
   config_rec *c;
+  pr_fh_t *fh;
+  int flags, xerrno;
+  struct passwd *pwd;
+  unsigned int algo_count, *algos;
 
   if (passwd_update_engine == FALSE) {
     return PR_DECLINED(cmd);
@@ -241,6 +247,132 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
         return PR_DECLINED(cmd);
       }
     }
+  }
+
+  PRIVS_ROOT
+  fh = pr_fsio_open(passwd_update_new_auth_user_file, O_RDONLY);
+  xerrno = errno;
+  PRIVS_RELINQUISH
+
+  if (fh == NULL) {
+    (void) pr_log_writefile(passwd_update_logfd, MOD_PASSWD_UPDATE_VERSION,
+      "error opening '%s': %s", passwd_update_new_auth_user_file,
+      strerror(xerrno));
+    return PR_DECLINED(cmd);
+  }
+
+  flags = PASSWD_UPDATE_FILE_FL_USE_LOCK;
+  pwd = passwd_update_file_get_entry(cmd->tmp_pool, fh, user, flags);
+  (void) pr_fsio_close(fh);
+
+  if (pwd != NULL) {
+    pr_trace_msg(trace_channel, 9,
+      "found existing entry for user '%s' in '%s'", user,
+      passwd_update_new_auth_user_file);
+    return PR_DECLINED(cmd);
+  }
+
+  PRIVS_ROOT
+  fh = pr_fsio_open(passwd_update_old_auth_user_file, O_RDONLY);
+  xerrno = errno;
+  PRIVS_RELINQUISH
+
+  if (fh == NULL) {
+    (void) pr_log_writefile(passwd_update_logfd, MOD_PASSWD_UPDATE_VERSION,
+      "error opening '%s': %s", passwd_update_old_auth_user_file,
+      strerror(xerrno));
+    return PR_DECLINED(cmd);
+  }
+
+  flags = 0;
+  pwd = passwd_update_file_get_entry(cmd->tmp_pool, fh, user, flags);
+  (void) pr_fsio_close(fh);
+
+  if (pwd == NULL) {
+    pr_trace_msg(trace_channel, 9,
+      "no entry found for user '%s' in '%s'", user,
+      passwd_update_old_auth_user_file);
+    return PR_DECLINED(cmd);
+  }
+
+  /* Verify that the given password matches this entry. */
+  text = crypt(cmd->arg, pwd->pw_passwd);
+  xerrno = errno;
+
+  if (text == NULL) {
+    (void) pr_log_writefile(passwd_update_logfd, MOD_PASSWD_UPDATE_VERSION,
+      "error using crypt(3) for user '%s': %s", user, strerror(xerrno));
+    return PR_DECLINED(cmd);
+  }
+
+  if (strcmp(text, pwd->pw_passwd) != 0) {
+    /* Wrong password */
+    pr_trace_msg(trace_channel, 9, "wrong password for user '%s', ignoring",
+      user);
+    return PR_DECLINED(cmd);
+  }
+
+  /* At this point, we have the entry for the known user from the old
+   * AuthUserFile; we can now update the password hash and add the
+   * updated entry to the new AuthUserFile.
+   */
+
+  c = find_config(main_server->conf, CONF_PARAM, "PasswordUpateAlgorithms",
+    FALSE);
+  if (c != NULL) {
+    algos = c->argv[0];
+    algo_count = *((unsigned int *) c->argv[1]);
+
+  } else {
+    algo_count = 2;
+    algos = palloc(cmd->tmp_pool, sizeof(unsigned int) * algo_count);
+    algos[0] = PASSWD_UPDATE_ALGO_SHA512;
+    algos[2] = PASSWD_UPDATE_ALGO_SHA256;
+  }
+
+  for (i = 0; i < algo_count; i++) {
+    unsigned int algo_id;
+
+    algo_id = algos[i];
+    text = passwd_update_get_hash(cmd->tmp_pool, cmd->arg, algo_id);
+    if (text != NULL) {
+      break;
+    }
+  }
+
+  if (text == NULL) {
+    (void) pr_log_writefile(passwd_update_logfd, MOD_PASSWD_UPDATE_VERSION,
+      "unable to generate updated password hash: %s", strerror(errno));
+    return PR_DECLINED(cmd);
+  }
+
+  pwd->pw_passwd = text;
+
+  PRIVS_ROOT
+  fh = pr_fsio_open(passwd_update_new_auth_user_file, O_WRONLY);
+  xerrno = errno;
+  PRIVS_RELINQUISH
+
+  if (fh == NULL) {
+    (void) pr_log_writefile(passwd_update_logfd, MOD_PASSWD_UPDATE_VERSION,
+      "error opening '%s': %s", passwd_update_new_auth_user_file,
+      strerror(xerrno));
+    return PR_DECLINED(cmd);
+  }
+
+  res = passwd_update_file_add_entry(cmd->tmp_pool, fh, pwd);
+  xerrno = errno;
+
+  if (res < 0) {
+    (void) pr_log_writefile(passwd_update_logfd, MOD_PASSWD_UPDATE_VERSION,
+      "error adding updated user '%s' entry to '%s': %s", user,
+      passwd_update_new_auth_user_file, strerror(xerrno));
+  }
+
+  if (pr_fsio_close(fh) < 0) {
+    (void) pr_log_writefile(passwd_update_logfd, MOD_PASSWD_UPDATE_VERSION,
+      "error writing '%s': %s", passwd_update_new_auth_user_file,
+      strerror(xerrno));
   }
 
   return PR_DECLINED(cmd);

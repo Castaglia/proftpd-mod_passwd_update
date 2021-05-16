@@ -132,8 +132,8 @@ START_TEST (passwd_from_text_test) {
   fail_unless(pwd != NULL, "Failed to handle valid text: %s", strerror(errno));
   fail_unless(strcmp(pwd->pw_name, "test") == 0,
     "Expected pw_name 'test', got '%s'", pwd->pw_name);
-  fail_unless(strcmp(pwd->pw_passwd, "test:enterpasswordhashhere") == 0,
-    "Expected pw_passwd 'test:enterpasswordhashhere', got '%s'",
+  fail_unless(strcmp(pwd->pw_passwd, "enterpasswordhashhere") == 0,
+    "Expected pw_passwd 'enterpasswordhashhere', got '%s'",
     pwd->pw_passwd);
   fail_unless(pwd->pw_uid == (uid_t) 1, "Expected pw_uid 1, got %lu",
     (unsigned long) pwd->pw_uid);
