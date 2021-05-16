@@ -36,6 +36,7 @@ questions, concerns, or suggestions regarding this module.
 <h2>Directives</h2>
 <ul>
   <li><a href="#PasswordUpdateAlgorithms">PasswordUpdateAlgorithms</a>
+  <li><a href="#PasswordUpdateAuthUserFiles">PasswordUpdateAuthUserFiles</a>
   <li><a href="#PasswordUpdateEngine">PasswordUpdateEngine</a>
   <li><a href="#PasswordUpdateLog">PasswordUpdateLog</a>
 </ul>
@@ -59,6 +60,24 @@ The currently implemented algorithms are:
   <li>SHA256
   <li>SHA512
 </ul>
+
+<p>
+<hr>
+<h3><a name="PasswordUpdateAuthUserFiles">PasswordUpdateAuthUserFiles</a></h3>
+<strong>Syntax:</strong> PasswordUpdateAuthUserFile <em>old-path new-path</em><br>
+<strong>Default:</strong> None</br>
+<strong>Context:</strong> server config, <code>&lt;VirtualHost&gt;</code>, <code>&lt;Global&gt;</code><br>
+<strong>Module:</strong> mod_passwd_update<br>
+<strong>Compatibility:</strong> 1.3.5 and later
+
+<p>
+The <code>PasswordUpdateAuthUserFiles</code> directive configures the paths
+to the old and new <code>AuthUserFiles</code>, which will contained the updated
+password entries for users whose password hashes have been updated.
+
+<p>
+<b>Note</b> that this directive is <b>required</b> for the module to function
+properly.
 
 <p>
 <hr>
@@ -97,6 +116,21 @@ unless <code>AllowLogSymlinks</code> is explicitly set to <em>on</em>
 <hr>
 <h2><a name="Usage">Usage</a></h2>
 
+<p><a name="ExampleConfiguration"></a>
+<b>Example Configuration</b><br>
+<pre>
+&lt;IfModule mod_passwd_update.c&gt;
+  PasswordUpdateEngine on
+  PasswordUpdateLog /path/to/proftpd.log
+  PasswordUpdateAuthUserFile /path/to/ftpd.passwd.old /path/to/ftpd.passwd.new
+&lt;/IfModule&gt;
+
+# Configure mod_auth_file to use the "new" auth file produced by
+# mod_passwd_update
+AuthUserFile /path/to/ftpd.passwd.new
+
+</pre>
+
 <p>
 <b>Logging</b><br>
 The <code>mod_passwd_update</code> module supports different forms of logging.
@@ -105,6 +139,7 @@ The main module logging is done via the
 debugging purposes, the module also uses <a href="http://www.proftpd.org/docs/howto/Tracing.html">trace logging</a>, via the module-specific channels:
 <ul>
   <li>passwd_update
+  <li>passwd_update.lock
   <li>passwd_update.passwd
   <li>passwd_update.salt
 </ul>

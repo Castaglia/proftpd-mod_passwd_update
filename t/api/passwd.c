@@ -141,7 +141,7 @@ Suite *tests_get_passwd_suite(void) {
   Suite *suite;
   TCase *testcase;
 
-  suite = suite_create("salt");
+  suite = suite_create("passwd");
   testcase = tcase_create("base");
 
   tcase_add_checked_fixture(testcase, set_up, tear_down);

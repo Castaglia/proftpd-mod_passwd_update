@@ -15,10 +15,12 @@ VPATH=@srcdir@
 MODULE_LIBS=@MODULE_LIBS@
 MODULE_NAME=mod_passwd_update
 MODULE_OBJS=mod_passwd_update.o \
+  lock.o \
   salt.o \
   passwd.o
 
 SHARED_MODULE_OBJS=mod_passwd_update.lo \
+  lock.lo \
   salt.lo \
   passwd.lo
 

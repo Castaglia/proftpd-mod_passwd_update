@@ -1,6 +1,6 @@
 /*
- * ProFTPD - mod_passwd_update API testsuite
- * Copyright (c) 2021 TJ Saunders <tj@castaglia.org>
+ * ProFTPD - mod_passwd_update locks
+ * Copyright (c) 2021 TJ Saunders
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,28 +22,13 @@
  * source distribution.
  */
 
-/* Testsuite management */
-
-#ifndef MOD_PASSWD_UPDATE_TESTS_H
-#define MOD_PASSWD_UPDATE_TESTS_H
+#ifndef MOD_PASSWD_UPDATE_LOCK_H
+#define MOD_PASSWD_UPDATE_LOCK_H
 
 #include "mod_passwd_update.h"
-#include "lock.h"
-#include "salt.h"
-#include "passwd.h"
 
-#ifdef HAVE_CHECK_H
-# include <check.h>
-#else
-# error "Missing Check installation; necessary for ProFTPD testsuite"
-#endif
+int passwd_update_rlock(pool *p, int fd);
+int passwd_update_wlock(pool *p, int fd);
+int passwd_update_ulock(pool *p, int fd);
 
-Suite *tests_get_lock_suite(void);
-Suite *tests_get_salt_suite(void);
-Suite *tests_get_passwd_suite(void);
-
-extern volatile unsigned int recvd_signal_flags;
-extern pid_t mpid;
-extern server_rec *main_server;
-
-#endif /* MOD_PASSWD_UPDATE_TESTS_H */
+#endif /* MOD_PASSWD_UPDATE_LOCK_H */

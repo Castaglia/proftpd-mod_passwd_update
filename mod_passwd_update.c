@@ -36,6 +36,9 @@ pool *passwd_update_pool = NULL;
 
 static int passwd_update_engine = FALSE;
 
+static const char *passwd_update_old_auth_user_file = NULL;
+static const char *passwd_update_new_auth_user_file = NULL;
+
 static const char *trace_channel = "passwd_update";
 
 static int passwd_update_openlog(void) {
@@ -127,6 +130,38 @@ MODRET set_passwdupdatealgos(cmd_rec *cmd) {
   return PR_HANDLED(cmd);
 }
 
+/* usage: PasswordUpdateAuthUserFiles old-path new-path */
+MODRET set_passwdupdateaauthuserfiles(cmd_rec *cmd) {
+  config_rec *c;
+  char *old_path, *new_path;
+
+  if (cmd->argc != 3) {
+    CONF_ERROR(cmd, "wrong number of parameters");
+  }
+
+  CHECK_CONF(cmd, CONF_ROOT|CONF_VIRTUAL|CONF_GLOBAL);
+
+  old_path = cmd->argv[1];
+  if (*old_path != '/') {
+    CONF_ERROR(cmd, pstrcat(cmd->tmp_pool,
+      "unable to use relative path for ", (char *) cmd->argv[0], " '",
+      old_path, "'", NULL));
+  }
+
+  new_path = cmd->argv[2];
+  if (*new_path != '/') {
+    CONF_ERROR(cmd, pstrcat(cmd->tmp_pool,
+      "unable to use relative path for ", (char *) cmd->argv[0], " '",
+      new_path, "'", NULL));
+  }
+
+  c = add_config_param(cmd->argv[0], 2, NULL, NULL);
+  c->argv[0] = pstrdup(c->pool, old_path);
+  c->argv[1] = pstrdup(c->pool, new_path);
+
+  return PR_HANDLED(cmd);
+}
+
 /* usage: PasswordUpdateEngine on|off */
 MODRET set_passwdupdateengine(cmd_rec *cmd) {
   int engine = 1;
@@ -160,8 +195,52 @@ MODRET set_passwdupdatelog(cmd_rec *cmd) {
  */
 
 MODRET passwd_update_pre_pass(cmd_rec *cmd) {
+  const char *user;
+  unsigned char *authenticated;
+  config_rec *c;
+
   if (passwd_update_engine == FALSE) {
     return PR_DECLINED(cmd);
+  }
+
+  /* Handle cases where the client already authenticated. */
+  authenticated = get_param_ptr(cmd->server->conf, "authenticated", FALSE);
+  if (authenticated != NULL &&
+      *authenticated == TRUE) {
+    pr_trace_msg(trace_channel, 9,
+      "client already authenticated, ignoring PASS command");
+    return DECLINED(cmd);
+  }
+
+  /* Handle cases where PASS might be sent before USER. */
+  user = pr_table_get(session.notes, "mod_auth.orig-user", NULL);
+  if (user == NULL) {
+    pr_trace_msg(trace_channel, 9,
+      "client has not sent USER command, ignoring PASS command");
+    return DECLINED(cmd);
+  }
+
+  c = find_config(main_server->conf, CONF_PARAM, "AllowEmptyPasswords",
+    FALSE);
+  if (c != NULL) {
+    int allow_empty_passwords;
+
+    allow_empty_passwords = *((int *) c->argv[0]);
+    if (allow_empty_passwords == FALSE) {
+      size_t passwd_len = 0;
+
+      if (cmd->argc > 1 &&
+          cmd->arg != NULL) {
+        passwd_len = strlen(cmd->arg);
+      }
+
+      if (passwd_len == 0) {
+        /* Let other modules deal with this. */
+        pr_trace_msg(trace_channel, 9,
+          "client sent empty password, ignoring PASS command");
+        return PR_DECLINED(cmd);
+      }
+    }
   }
 
   return PR_DECLINED(cmd);
@@ -257,6 +336,18 @@ static int passwd_update_sess_init(void) {
   }
 
   (void) passwd_update_openlog();
+
+  c = find_config(main_server->conf, CONF_PARAM, "PasswordUpdateAuthUserFiles",
+    FALSE);
+  if (c == NULL) {
+    (void) pr_log_writefile(passwd_update_logfd, MOD_PASSWD_UPDATE_VERSION,
+      "missing required PasswordUpdateAuthUserFiles directive");
+    passwd_update_engine = FALSE;
+    return 0;
+  }
+
+  passwd_update_old_auth_user_file = c->argv[0];
+  passwd_update_new_auth_user_file = c->argv[1];
   return 0;
 }
 
@@ -264,9 +355,10 @@ static int passwd_update_sess_init(void) {
  */
 
 static conftable passwd_update_conftab[] = {
-  { "PasswordUpdateAlgorithms",	set_passwdupdatealgos,		NULL },
-  { "PasswordUpdateEngine",	set_passwdupdateengine,		NULL },
-  { "PasswordUpdateLog",	set_passwdupdatelog,		NULL },
+  { "PasswordUpdateAlgorithms",		set_passwdupdatealgos,		NULL },
+  { "PasswordUpdateAuthUserFiles",	set_passwdupdateaauthuserfiles,	NULL },
+  { "PasswordUpdateEngine",		set_passwdupdateengine,		NULL },
+  { "PasswordUpdateLog",		set_passwdupdatelog,		NULL },
 
   { NULL }
 };

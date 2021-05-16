@@ -30,6 +30,7 @@ struct testsuite_info {
 };
 
 static struct testsuite_info suites[] = {
+  { "lock",		tests_get_lock_suite },
   { "salt",		tests_get_salt_suite },
   { "passwd",		tests_get_passwd_suite },
 
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
   srunner_set_log(runner, log_file);
 
   requested = getenv("PASSWD_UPDATE_TEST_SUITE");
-  if (requested) {
+  if (requested != NULL) {
     Suite *suite;
 
     suite = tests_get_suite(requested);
@@ -84,7 +85,7 @@ int main(int argc, char *argv[]) {
       Suite *suite;
 
       suite = (suites[i].get_suite)();
-      if (suite) {
+      if (suite != NULL) {
         srunner_add_suite(runner, suite);
       }
     }
@@ -94,7 +95,7 @@ int main(int argc, char *argv[]) {
   pr_trace_use_stderr(TRUE);
 
   requested = getenv("PASSWD_UPDATE_TEST_NOFORK");
-  if (requested) {
+  if (requested != NULL) {
     srunner_set_fork_status(runner, CK_NOFORK);
 
   } else {
