@@ -122,13 +122,12 @@ unless <code>AllowLogSymlinks</code> is explicitly set to <em>on</em>
 &lt;IfModule mod_passwd_update.c&gt;
   PasswordUpdateEngine on
   PasswordUpdateLog /path/to/proftpd.log
-  PasswordUpdateAuthUserFile /path/to/ftpd.passwd.old /path/to/ftpd.passwd.new
+  PasswordUpdateAuthUserFiles /path/to/ftpd.passwd.old /path/to/ftpd.passwd.new
 &lt;/IfModule&gt;
 
 # Configure mod_auth_file to use the "new" auth file produced by
 # mod_passwd_update
 AuthUserFile /path/to/ftpd.passwd.new
-
 </pre>
 
 <p>
