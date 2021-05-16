@@ -161,9 +161,9 @@ struct passwd *passwd_update_from_text(pool *p, const char *text,
     return NULL;
   }
 
-  pw->pw_gecos = pstrdup(p, fields[4]);
-  pw->pw_dir = pstrdup(p, fields[5]);
-  pw->pw_shell = pstrdup(p, fields[6]);
+  pwd->pw_gecos = pstrdup(p, fields[4]);
+  pwd->pw_dir = pstrdup(p, fields[5]);
+  pwd->pw_shell = pstrdup(p, fields[6]);
 
   return pwd;
 }
