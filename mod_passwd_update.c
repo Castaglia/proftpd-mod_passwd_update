@@ -209,7 +209,7 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
       *authenticated == TRUE) {
     pr_trace_msg(trace_channel, 9,
       "client already authenticated, ignoring PASS command");
-    return DECLINED(cmd);
+    return PR_DECLINED(cmd);
   }
 
   /* Handle cases where PASS might be sent before USER. */
@@ -217,7 +217,7 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
   if (user == NULL) {
     pr_trace_msg(trace_channel, 9,
       "client has not sent USER command, ignoring PASS command");
-    return DECLINED(cmd);
+    return PR_DECLINED(cmd);
   }
 
   c = find_config(main_server->conf, CONF_PARAM, "AllowEmptyPasswords",
