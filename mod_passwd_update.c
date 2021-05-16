@@ -220,7 +220,7 @@ MODRET set_passwdupdatelog(cmd_rec *cmd) {
 
 MODRET passwd_update_pre_pass(cmd_rec *cmd) {
   register unsigned int i;
-  const char *user, *text;
+  const char *user, *text, *proto;
   unsigned char *authenticated;
   config_rec *c;
   pr_fh_t *fh;
@@ -229,6 +229,15 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
   unsigned int algo_count, *algos;
 
   if (passwd_update_engine == FALSE) {
+    return PR_DECLINED(cmd);
+  }
+
+  /* We currently only work for FTP, not SFTP. */
+  proto = pr_session_get_protocol(0);
+  if (strcmp(proto, "ftp") != 0 &&
+      strcmp(proto, "ftps") != 0) {
+    pr_trace_msg(trace_channel, 9,
+      "skipping password migration for %s protocol session", proto);
     return PR_DECLINED(cmd);
   }
 
