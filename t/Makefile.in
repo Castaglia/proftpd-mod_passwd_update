@@ -41,7 +41,8 @@ TEST_API_DEPS=\
   $(top_srcdir)/src/error.o \
   $(module_srcdir)/lock.o \
   $(module_srcdir)/salt.o \
-  $(module_srcdir)/passwd.o
+  $(module_srcdir)/passwd.o \
+  $(module_srcdir)/file.o
 
 TEST_API_LIBS="-lcheck -lm @MODULE_LIBS@"
 
@@ -49,6 +50,7 @@ TEST_API_OBJS=\
   api/lock.o \
   api/salt.o \
   api/passwd.o \
+  api/file.o \
   api/stubs.o \
   api/tests.o
 

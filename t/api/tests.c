@@ -33,6 +33,7 @@ static struct testsuite_info suites[] = {
   { "lock",		tests_get_lock_suite },
   { "salt",		tests_get_salt_suite },
   { "passwd",		tests_get_passwd_suite },
+  { "file",		tests_get_file_suite },
 
   { NULL, NULL }
 };

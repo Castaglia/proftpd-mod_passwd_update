@@ -31,6 +31,7 @@
 #include "lock.h"
 #include "salt.h"
 #include "passwd.h"
+#include "file.h"
 
 #ifdef HAVE_CHECK_H
 # include <check.h>
@@ -41,6 +42,7 @@
 Suite *tests_get_lock_suite(void);
 Suite *tests_get_salt_suite(void);
 Suite *tests_get_passwd_suite(void);
+Suite *tests_get_file_suite(void);
 
 extern volatile unsigned int recvd_signal_flags;
 extern pid_t mpid;

@@ -26,6 +26,9 @@
 #include "salt.h"
 #include "passwd.h"
 
+/* Number of fields in a passwd(5) line. */
+#define PASSWD_UPDATE_NFIELDS	7
+
 static const char *trace_channel = "passwd_update.passwd";
 
 static int hash_is_usable(pool *p, const char *hash, unsigned int algo_id) {
@@ -87,6 +90,82 @@ const char *passwd_update_get_hash(pool *p, const char *plaintext,
   }
 
   return hash;
+}
+
+/* Borrowed from mod_auth_file.'s af_getpasswd(). */
+struct passwd *passwd_update_from_text(pool *p, const char *text,
+    size_t text_len) {
+  unsigned int nfields;
+  char buf[PR_TUNABLE_BUFFER_SIZE], *fields[PASSWD_UPDATE_NFIELDS], *ptr;
+  struct passwd *pwd;
+
+  if (p == NULL ||
+      text == NULL ||
+      text_len == 0) {
+    errno = EINVAL;
+    return NULL;
+  }
+
+  sstrncpy(buf, text, sizeof(buf)-1);
+  buf[sizeof(buf)-1] = '\0';
+
+  for (ptr = buf, nfields = 0;
+       nfields < PASSWD_UPDATE_NFIELDS && ptr != NULL;
+       nfields++) {
+    fields[nfields] = ptr;
+
+    while (*ptr &&
+           *ptr != ':') {
+      ptr++;
+    }
+
+    if (*ptr) {
+      *ptr++ = '\0';
+
+    } else {
+      ptr = NULL;
+    }
+  }
+
+  if (nfields != PASSWD_UPDATE_NFIELDS) {
+    pr_trace_msg(trace_channel, 2,
+      "malformed passwd(5) text (field count %u != %d)", nfields,
+      PASSWD_UPDATE_NFIELDS);
+    errno = EPERM;
+    return NULL;
+  }
+
+  pwd = pcalloc(p, sizeof(struct passwd));
+  pwd->pw_name = fields[0];
+  pwd->pw_passwd = fields[1];
+
+  if (*fields[2] == '\0' ||
+      *fields[3] == '\0') {
+    pr_trace_msg(trace_channel, 2,
+      "missing UID/GID fields for user '%.100s'", pwd->pw_name);
+    errno = EPERM;
+    return NULL;
+  }
+
+  if (pr_str2uid(fields[2], &(pwd->pw_uid)) < 0) {
+    pr_trace_msg(trace_channel, 2,
+      "invalid UID field '%s' for user '%.100s'", fields[2], pwd->pw_name);
+    errno = EPERM;
+    return NULL;
+  }
+
+  if (pr_str2gid(fields[3], &(pwd->pw_gid)) < 0) {
+    pr_trace_msg(trace_channel, 2,
+      "invalid GID field '%s' for user '%.100s'", fields[3], pwd->pw_name);
+    errno = EPERM;
+    return NULL;
+  }
+
+  pw->pw_gecos = pstrdup(p, fields[4]);
+  pw->pw_dir = pstrdup(p, fields[5]);
+  pw->pw_shell = pstrdup(p, fields[6]);
+
+  return pwd;
 }
 
 const char *passwd_update_to_text(pool *p, struct passwd *pwd) {

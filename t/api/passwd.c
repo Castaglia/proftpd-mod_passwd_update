@@ -87,6 +87,67 @@ START_TEST (passwd_get_hash_test) {
 }
 END_TEST
 
+START_TEST (passwd_from_text_test) {
+  struct passwd *pwd;
+  const char *text;
+  size_t text_len;
+
+  mark_point();
+  pwd = passwd_update_from_text(NULL, NULL, 0);
+  fail_unless(pwd == NULL, "Failed to handle null pool");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  mark_point();
+  pwd = passwd_update_from_text(p, NULL, 0);
+  fail_unless(pwd == NULL, "Failed to handle null text");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  text = "foobar";
+
+  mark_point();
+  pwd = passwd_update_from_text(p, text, 0);
+  fail_unless(pwd == NULL, "Failed to handle zero textlen");
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+
+  text_len = strlen(text);
+
+  mark_point();
+  pwd = passwd_update_from_text(p, text, text_len);
+  fail_unless(pwd == NULL, "Failed to handle invalid text");
+  fail_unless(errno == EPERM, "Expected EPERM (%d), got %s (%d)", EPERM,
+    strerror(errno), errno);
+
+  /* XXX TODO:
+   *  fill in tests
+   */
+
+  text = "test:enterpasswordhashhere:1:1::/home/test:/bin/bash";
+  text_len = strlen(text);
+
+  mark_point();
+  pwd = passwd_update_from_text(p, text, text_len);
+  fail_unless(pwd != NULL, "Failed to handle valid text: %s", strerror(errno));
+  fail_unless(strcmp(pwd->pw_name, "test") == 0,
+    "Expected pw_name 'test', got '%s'", pwd->pw_name);
+  fail_unless(strcmp(pwd->pw_passwd, "test:enterpasswordhashhere") == 0,
+    "Expected pw_passwd 'test:enterpasswordhashhere', got '%s'",
+    pwd->pw_passwd);
+  fail_unless(pwd->pw_uid == (uid_t) 1, "Expected pw_uid 1, got %lu",
+    (unsigned long) pwd->pw_uid);
+  fail_unless(pwd->pw_gid == (gid_t) 1, "Expected pw_gid 1, got %lu",
+    (unsigned long) pwd->pw_gid);
+  fail_unless(strcmp(pwd->pw_gecos, "") == 0,
+    "Expected pw_gecos '', got '%s'", pwd->pw_gecos);
+  fail_unless(strcmp(pwd->pw_dir, "/home/test") == 0,
+    "Expected pw_dir '/home/test', got '%s'", pwd->pw_dir);
+  fail_unless(strcmp(pwd->pw_shell, "/bin/bash") == 0,
+    "Expected pw_shell '/bin/bash', got '%s'", pwd->pw_shell);
+}
+END_TEST
+
 START_TEST (passwd_to_text_test) {
   const char *text, *expected;
   struct passwd pwd;
@@ -147,6 +208,7 @@ Suite *tests_get_passwd_suite(void) {
   tcase_add_checked_fixture(testcase, set_up, tear_down);
 
   tcase_add_test(testcase, passwd_get_hash_test);
+  tcase_add_test(testcase, passwd_from_text_test);
   tcase_add_test(testcase, passwd_to_text_test);
 
   suite_add_tcase(suite, testcase);

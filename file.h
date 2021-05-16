@@ -1,5 +1,5 @@
 /*
- * ProFTPD - mod_passwd_update passwords
+ * ProFTPD - mod_passwd_update files
  * Copyright (c) 2021 TJ Saunders
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,24 +22,15 @@
  * source distribution.
  */
 
-#ifndef MOD_PASSWD_UPDATE_PASSWD_H
-#define MOD_PASSWD_UPDATE_PASSWD_H
+#ifndef MOD_PASSWD_UPDATE_FILE_H
+#define MOD_PASSWD_UPDATE_FILE_H
 
 #include "mod_passwd_update.h"
 
-/* Generate a new password hash using the requested algo for the given
- * plaintext.
- */
-const char *passwd_update_get_hash(pool *p, const char *plaintext,
-  unsigned int algo_id);
+struct passwd *passwd_update_file_get_entry(pool *p, pr_fh_t *fh,
+  const char *user, int flags);
+#define PASSWD_UPDATE_FILE_FL_USE_LOCK	0x001
 
-/* Given a line of passwd(5) formatted text, parse it into a struct passwd. */
-struct passwd *passwd_update_from_text(pool *p, const char *text,
-  size_t text_len);
+int passwd_update_file_add_entry(pool *p, struct passwd *pwd);
 
-/* Generate the text line to add to a passwd(5) formatted file, such as an
- * AuthUserFile, from the given passwd struct.
- */
-const char *passwd_update_to_text(pool *p, struct passwd *pwd);
-
-#endif /* MOD_PASSWD_UPDATE_PASSWD_H */
+#endif /* MOD_PASSWD_UPDATE_FILE_H */
