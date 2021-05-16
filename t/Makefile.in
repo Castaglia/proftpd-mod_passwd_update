@@ -26,12 +26,15 @@ TEST_API_DEPS=\
   $(top_srcdir)/src/event.o \
   $(top_srcdir)/src/timers.o \
   $(top_srcdir)/src/modules.o \
+  $(top_srcdir)/src/configdb.o \
   $(top_srcdir)/src/netaddr.o \
   $(top_srcdir)/src/fsio.o \
+  $(top_srcdir)/src/auth.o \
   $(top_srcdir)/src/env.o \
   $(top_srcdir)/src/trace.o \
   $(top_srcdir)/src/random.o \
   $(top_srcdir)/src/support.o \
+  $(top_srcdir)/src/error.o \
   $(module_srcdir)/salt.o \
   $(module_srcdir)/passwd.o
 
