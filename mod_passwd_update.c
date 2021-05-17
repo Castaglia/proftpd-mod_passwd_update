@@ -407,6 +407,8 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
       strerror(xerrno));
   }
 
+  (void) pr_log_writefile(passwd_update_logfd, MOD_PASSWD_UPDATE_VERSION,
+    "successfully updated password hash for user '%s'", user);
   return PR_DECLINED(cmd);
 }
 
