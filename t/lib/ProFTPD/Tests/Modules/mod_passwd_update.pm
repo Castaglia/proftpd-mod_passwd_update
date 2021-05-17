@@ -53,23 +53,6 @@ sub list_tests {
   return testsuite_get_runnable_tests($TESTS);
 }
 
-sub touch_file {
-  my $path = shift;
-
-  if (open(my $fh, "> $path")) {
-    unless (close($fh)) {
-      die("Can't write $path: $!");
-    }
-
-  } else {
-    die("Can't open $path: $!");
-  }
-
-  unless (chmod(0640, $path)) {
-    die("Can't set perms on $path: $!");
-  }
-}
-
 sub passwd_update_unknown_user {
   my $self = shift;
   my $tmpdir = $self->{tmpdir};
@@ -78,9 +61,6 @@ sub passwd_update_unknown_user {
   my $new_auth_user_file = $setup->{auth_user_file};
   $new_auth_user_file .= '.new';
 
-  # Make sure the new auth file exists, even if blank.
-  touch_file($new_auth_user_file);
-
   my $config = {
     PidFile => $setup->{pid_file},
     ScoreboardFile => $setup->{scoreboard_file},
@@ -88,9 +68,7 @@ sub passwd_update_unknown_user {
     TraceLog => $setup->{log_file},
     Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
 
-    AuthUserFile => $new_auth_user_file,
     AuthGroupFile => $setup->{auth_group_file},
-    SocketBindTight => 'on',
 
     IfModules => {
       'mod_delay.c' => {
@@ -107,6 +85,17 @@ sub passwd_update_unknown_user {
 
   my ($port, $config_user, $config_group) = config_write($setup->{config_file},
     $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
 
   # Open pipes, for use between the parent and child processes.  Specifically,
   # the child will indicate when it's done with its test by writing a message
@@ -195,9 +184,6 @@ sub passwd_update_bad_password {
   my $new_auth_user_file = $setup->{auth_user_file};
   $new_auth_user_file .= '.new';
 
-  # Make sure the new auth file exists, even if blank.
-  touch_file($new_auth_user_file);
-
   my $config = {
     PidFile => $setup->{pid_file},
     ScoreboardFile => $setup->{scoreboard_file},
@@ -205,9 +191,7 @@ sub passwd_update_bad_password {
     TraceLog => $setup->{log_file},
     Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
 
-    AuthUserFile => $new_auth_user_file,
     AuthGroupFile => $setup->{auth_group_file},
-    SocketBindTight => 'on',
 
     IfModules => {
       'mod_delay.c' => {
@@ -224,6 +208,17 @@ sub passwd_update_bad_password {
 
   my ($port, $config_user, $config_group) = config_write($setup->{config_file},
     $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
 
   # Open pipes, for use between the parent and child processes.  Specifically,
   # the child will indicate when it's done with its test by writing a message
@@ -318,9 +313,6 @@ sub passwd_update_algo_sha256 {
   my $new_auth_user_file = $setup->{auth_user_file};
   $new_auth_user_file .= '.new';
 
-  # Make sure the new auth file exists, even if blank.
-  touch_file($new_auth_user_file);
-
   my $config = {
     PidFile => $setup->{pid_file},
     ScoreboardFile => $setup->{scoreboard_file},
@@ -328,9 +320,7 @@ sub passwd_update_algo_sha256 {
     TraceLog => $setup->{log_file},
     Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
 
-    AuthUserFile => $new_auth_user_file,
     AuthGroupFile => $setup->{auth_group_file},
-    SocketBindTight => 'on',
 
     IfModules => {
       'mod_delay.c' => {
@@ -348,6 +338,17 @@ sub passwd_update_algo_sha256 {
 
   my ($port, $config_user, $config_group) = config_write($setup->{config_file},
     $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
 
   # Open pipes, for use between the parent and child processes.  Specifically,
   # the child will indicate when it's done with its test by writing a message
@@ -443,9 +444,6 @@ sub passwd_update_algo_sha512 {
   my $new_auth_user_file = $setup->{auth_user_file};
   $new_auth_user_file .= '.new';
 
-  # Make sure the new auth file exists, even if blank.
-  touch_file($new_auth_user_file);
-
   my $config = {
     PidFile => $setup->{pid_file},
     ScoreboardFile => $setup->{scoreboard_file},
@@ -453,9 +451,7 @@ sub passwd_update_algo_sha512 {
     TraceLog => $setup->{log_file},
     Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
 
-    AuthUserFile => $new_auth_user_file,
     AuthGroupFile => $setup->{auth_group_file},
-    SocketBindTight => 'on',
 
     IfModules => {
       'mod_delay.c' => {
@@ -473,6 +469,17 @@ sub passwd_update_algo_sha512 {
 
   my ($port, $config_user, $config_group) = config_write($setup->{config_file},
     $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
 
   # Open pipes, for use between the parent and child processes.  Specifically,
   # the child will indicate when it's done with its test by writing a message
@@ -562,9 +569,6 @@ sub passwd_update_algo_des {
   my $new_auth_user_file = $setup->{auth_user_file};
   $new_auth_user_file .= '.new';
 
-  # Make sure the new auth file exists, even if blank.
-  touch_file($new_auth_user_file);
-
   my $config = {
     PidFile => $setup->{pid_file},
     ScoreboardFile => $setup->{scoreboard_file},
@@ -572,9 +576,7 @@ sub passwd_update_algo_des {
     TraceLog => $setup->{log_file},
     Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
 
-    AuthUserFile => $new_auth_user_file,
     AuthGroupFile => $setup->{auth_group_file},
-    SocketBindTight => 'on',
 
     IfModules => {
       'mod_delay.c' => {
@@ -592,6 +594,17 @@ sub passwd_update_algo_des {
 
   my ($port, $config_user, $config_group) = config_write($setup->{config_file},
     $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
 
   # Open pipes, for use between the parent and child processes.  Specifically,
   # the child will indicate when it's done with its test by writing a message

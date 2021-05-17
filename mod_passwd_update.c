@@ -158,6 +158,7 @@ MODRET set_passwdupdatealgos(cmd_rec *cmd) {
 MODRET set_passwdupdateaauthuserfiles(cmd_rec *cmd) {
   config_rec *c;
   char *old_path, *new_path;
+  int fd, xerrno;
 
   if (cmd->argc != 3) {
     CONF_ERROR(cmd, "wrong number of parameters");
@@ -178,6 +179,19 @@ MODRET set_passwdupdateaauthuserfiles(cmd_rec *cmd) {
       "unable to use relative path for ", (char *) cmd->argv[0], " '",
       new_path, "'", NULL));
   }
+
+  /* Make sure the new path exists. */
+  PRIVS_ROOT
+  fd = open(new_path, O_RDWR|O_CREAT, 0600);
+  xerrno = errno;
+  PRIVS_RELINQUISH
+
+  if (fd < 0) {
+    CONF_ERROR(cmd, pstrcat(cmd->tmp_pool,
+      "error opening '%s': %s", new_path, strerror(xerrno), NULL));
+  }
+
+  (void) close(fd);
 
   c = add_config_param(cmd->argv[0], 2, NULL, NULL);
   c->argv[0] = pstrdup(c->pool, old_path);
