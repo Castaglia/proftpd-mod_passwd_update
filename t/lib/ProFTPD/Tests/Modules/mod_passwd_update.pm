@@ -44,6 +44,11 @@ my $TESTS = {
     test_class => [qw(forking)],
   },
 
+  passwd_update_authorder_without_auth_file => {
+    order => ++$order,
+    test_class => [qw(forking)],
+  },
+
   passwd_update_sftp_ignore_publickey_auth => {
     order => ++$order,
     test_class => [qw(forking mod_sftp)],
@@ -720,6 +725,137 @@ sub passwd_update_algo_des {
 
       $self->assert($ok,
         test_msg("Did not see expected 'DES salt' log messages"));
+
+    } else {
+      die("Can't read $setup->{log_file}: $!");
+    }
+  };
+  if ($@) {
+    $ex = $@;
+  }
+
+  test_cleanup($setup->{log_file}, $ex);
+}
+
+sub passwd_update_authorder_without_auth_file {
+  my $self = shift;
+  my $tmpdir = $self->{tmpdir};
+  my $setup = test_setup($tmpdir, 'passwd_update');
+
+  my $new_auth_user_file = $setup->{auth_user_file};
+  $new_auth_user_file .= '.new';
+
+  my $algos = 'sha512 sha256';
+  if ($^O eq 'darwin') {
+    # Mac's crypt(3) doesn't support SHA256/SHA512.  Sigh.
+    $algos = 'des';
+  }
+
+  my $config = {
+    PidFile => $setup->{pid_file},
+    ScoreboardFile => $setup->{scoreboard_file},
+    SystemLog => $setup->{log_file},
+    TraceLog => $setup->{log_file},
+    Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
+
+    AuthOrder => 'mod_auth_unix.c',
+    AuthGroupFile => $setup->{auth_group_file},
+
+    IfModules => {
+      'mod_delay.c' => {
+        DelayEngine => 'off',
+      },
+
+      'mod_passwd_update.c' => {
+        PasswordUpdateEngine => 'on',
+        PasswordUpdateLog => $setup->{log_file},
+        PasswordUpdateAuthUserFiles => "$setup->{auth_user_file} $new_auth_user_file",
+        PasswordUpdateAlgorithms => $algos,
+      },
+    },
+  };
+
+  my ($port, $config_user, $config_group) = config_write($setup->{config_file},
+    $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
+
+  # Open pipes, for use between the parent and child processes.  Specifically,
+  # the child will indicate when it's done with its test by writing a message
+  # to the parent.
+  my ($rfh, $wfh);
+  unless (pipe($rfh, $wfh)) {
+    die("Can't open pipe: $!");
+  }
+
+  my $ex;
+
+  # Fork child
+  $self->handle_sigchld();
+  defined(my $pid = fork()) or die("Can't fork: $!");
+  if ($pid) {
+    eval {
+      sleep(1);
+
+      my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
+      eval { $client->login($setup->{user}, $setup->{passwd}) };
+      unless ($@) {
+        die("Login succeeded unexpectedly");
+      }
+
+      $client->quit();
+    };
+    if ($@) {
+      $ex = $@;
+    }
+
+    $wfh->print("done\n");
+    $wfh->flush();
+
+  } else {
+    eval { server_wait($setup->{config_file}, $rfh) };
+    if ($@) {
+      warn($@);
+      exit 1;
+    }
+
+    exit 0;
+  }
+
+  # Stop server
+  server_stop($setup->{pid_file});
+  $self->assert_child_ok($pid);
+
+  eval {
+    if (open(my $fh, "< $setup->{log_file}")) {
+      my $ok = 0;
+
+      while (my $line = <$fh>) {
+        chomp($line);
+
+        if ($ENV{TEST_VERBOSE}) {
+          print STDERR "# $line\n";
+        }
+
+        if ($line =~ /not found in AuthOrder, skipping password migration/) {
+          $ok = 1;
+          last;
+        }
+      }
+
+      close($fh);
+
+      $self->assert($ok,
+        test_msg("Did not see expected 'no entry found' log messages"));
 
     } else {
       die("Can't read $setup->{log_file}: $!");
