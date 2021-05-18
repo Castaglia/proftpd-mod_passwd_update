@@ -250,9 +250,26 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
   proto = pr_session_get_protocol(0);
   if (strcmp(proto, "ftp") != 0 &&
       strcmp(proto, "ftps") != 0) {
-    pr_trace_msg(trace_channel, 9,
-      "skipping password migration for %s protocol session", proto);
-    return PR_DECLINED(cmd);
+    char *sftp_auth_method;
+
+    /* Check for the SFTP_USER_AUTH_METHOD environment variable, set by
+     * mod_sftp.  If it is not present, then mod_sftp is too old -- and we
+     * MUST use this environment variable, to know when password-based SSH
+     * sessions (vs publickey auth sessions) are used.
+     */
+    sftp_auth_method = pr_env_get(cmd->tmp_pool, "SFTP_USER_AUTH_METHOD");
+    if (sftp_auth_method == NULL) {
+      pr_trace_msg(trace_channel, 9,
+        "skipping password migration for %s protocol session", proto);
+      return PR_DECLINED(cmd);
+    }
+
+    if (strcmp(sftp_auth_method, "password") != 0) {
+      pr_trace_msg(trace_channel, 9,
+        "skipping password migration for %s protocol session with %s "
+        "authentication", proto, sftp_auth_method);
+      return PR_DECLINED(cmd);
+    }
   }
 
   /* Handle cases where the client already authenticated. */

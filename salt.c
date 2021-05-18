@@ -27,11 +27,8 @@
 
 static const char *trace_channel = "passwd_update.salt";
 
-static const char *des_salt_text = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-static size_t des_salt_textlen = 64;
-
-static const char *salt_text = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-static size_t salt_textlen = 62;
+static const char *salt_text = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+static size_t salt_textlen = 64;
 
 static long next_random(long min, long max) {
 #if PROFTPD_VERSION_NUMBER < 0x0001030705
@@ -107,8 +104,8 @@ const char *passwd_update_get_salt(pool *p, unsigned int algo_id) {
       for (i = 0; i < salt_len-1; i++) {
         long idx;
 
-        idx = next_random(0, des_salt_textlen-1);
-        salt[i] = des_salt_text[idx];
+        idx = next_random(0, salt_textlen-1);
+        salt[i] = salt_text[idx];
       }
 
       pr_trace_msg(trace_channel, 19, "generated DES salt: '%s'", salt);
