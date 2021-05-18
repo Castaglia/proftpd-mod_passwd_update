@@ -28,7 +28,7 @@
 #include "conf.h"
 #include "privs.h"
 
-#define MOD_PASSWD_UPDATE_VERSION	"mod_passwd_update/0.0"
+#define MOD_PASSWD_UPDATE_VERSION	"mod_passwd_update/0.1"
 
 /* Define if you have the random function.  */
 #undef HAVE_RANDOM
