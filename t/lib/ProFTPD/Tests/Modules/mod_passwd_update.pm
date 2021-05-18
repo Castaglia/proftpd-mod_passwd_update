@@ -846,7 +846,7 @@ sub passwd_update_authorder_without_auth_file {
           print STDERR "# $line\n";
         }
 
-        if ($line =~ /not found in AuthOrder, skipping password migration/) {
+        if ($line =~ /not found in AuthOrder, skipping password update/) {
           $ok = 1;
           last;
         }
@@ -984,7 +984,7 @@ sub passwd_update_sftp_ignore_publickey_auth {
           print STDERR "# $line\n";
         }
 
-        if ($line =~ /skipping password migration for ssh2 protocol session with publickey authentication/) {
+        if ($line =~ /skipping password update for ssh2 protocol session with publickey authentication/) {
           $ok = 1;
           last;
         }
