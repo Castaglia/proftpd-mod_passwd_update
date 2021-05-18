@@ -246,6 +246,40 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
     return PR_DECLINED(cmd);
   }
 
+  /* Ensure that mod_auth_file is one of the sources of user data by checking
+   * AuthOrder.
+   */
+  c = find_config(main_server->conf, CONF_PARAM, "AuthOrder", FALSE);
+  if (c != NULL) {
+    register unsigned int i = 0;
+    array_header *module_list = (array_header *) c->argv[0];
+    unsigned int modulec = 0;
+    char **modulev = NULL;
+    int using_auth_file = FALSE;
+
+    pr_trace_msg(trace_channel, 9, "checking AuthOrder for mod_auth_file.c");
+
+    modulec = module_list->nelts;
+    modulev = (char **) module_list->elts;
+
+    for (i = 0; i < modulec; i++) {
+      char *module_name;
+
+      module_name = modulev[i];
+      if (strncmp(module_name, "mod_auth_file.c", 15) == 0) {
+        pr_trace_msg(trace_channel, 9, "found 'mod_auth_file.c' in AuthOrder");
+        using_auth_file = TRUE;
+        break;
+      }
+    }
+
+    if (using_auth_file == FALSE) {
+      pr_trace_msg(trace_channel, 9,
+        "mod_auth_file.c not found in AuthOrder, skipping password migration");
+      return PR_DECLINED(cmd);
+    }
+  }
+
   /* We currently only work for FTP, not SFTP. */
   proto = pr_session_get_protocol(0);
   if (strcmp(proto, "ftp") != 0 &&
