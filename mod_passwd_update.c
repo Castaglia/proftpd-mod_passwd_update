@@ -126,7 +126,7 @@ MODRET set_passwdupdatealgos(cmd_rec *cmd) {
   algos = pcalloc(c->pool, sizeof(unsigned int) * algo_count);
 
   for (i = 1; i < cmd->argc; i++) {
-    unsigned int algo_id;
+    unsigned int algo_id = 0;
 
     if (strcasecmp(cmd->argv[i], "sha256") == 0 ||
         strcasecmp(cmd->argv[i], "sha2-256") == 0) {

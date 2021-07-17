@@ -143,7 +143,9 @@ int passwd_update_ulock(pool *p, int fd) {
 
   res = fcnctl(fd, F_SETLKW, &lock);
   while (res < 0) {
-    if (errno == EINTR) {
+    xerrno = errno;
+
+    if (xerrno == EINTR) {
       pr_signals_handle();
 
       res = fcnctl(fd, F_SETLKW, &lock);
