@@ -1,6 +1,6 @@
 /*
  * ProFTPD - mod_passwd_update
- * Copyright (c) 2021 TJ Saunders
+ * Copyright (c) 2021-2022 TJ Saunders
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -251,7 +251,6 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
    */
   c = find_config(main_server->conf, CONF_PARAM, "AuthOrder", FALSE);
   if (c != NULL) {
-    register unsigned int i = 0;
     array_header *module_list = (array_header *) c->argv[0];
     unsigned int modulec = 0;
     char **modulev = NULL;
