@@ -1,6 +1,6 @@
 /*
  * ProFTPD - mod_passwd_update API testsuite
- * Copyright (c) 2021 TJ Saunders <tj@castaglia.org>
+ * Copyright (c) 2021-2022 TJ Saunders <tj@castaglia.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,23 +56,23 @@ START_TEST (lock_ulock_test) {
 
   mark_point();
   res = passwd_update_ulock(NULL, -1);
-  fail_unless(res < 0, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   fd = -1;
 
   mark_point();
   res = passwd_update_ulock(p, fd);
-  fail_unless(res < 0, "Failed to handle bad fd");
-  fail_unless(errno == EBADF, "Expected EBADF (%d), got %s (%d)", EBADF,
+  ck_assert_msg(res < 0, "Failed to handle bad fd");
+  ck_assert_msg(errno == EBADF, "Expected EBADF (%d), got %s (%d)", EBADF,
     strerror(errno), errno);
 
   fd = 0;
 
   mark_point();
   res = passwd_update_ulock(p, fd);
-  fail_unless(res == 0, "Failed to unlock fd %d: %s", fd, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to unlock fd %d: %s", fd, strerror(errno));
 }
 END_TEST
 
@@ -81,23 +81,23 @@ START_TEST (lock_rlock_test) {
 
   mark_point();
   res = passwd_update_rlock(NULL, -1);
-  fail_unless(res < 0, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   fd = -1;
 
   mark_point();
   res = passwd_update_rlock(p, fd);
-  fail_unless(res < 0, "Failed to handle bad fd");
-  fail_unless(errno == EBADF, "Expected EBADF (%d), got %s (%d)", EBADF,
+  ck_assert_msg(res < 0, "Failed to handle bad fd");
+  ck_assert_msg(errno == EBADF, "Expected EBADF (%d), got %s (%d)", EBADF,
     strerror(errno), errno);
 
   fd = 0;
 
   mark_point();
   res = passwd_update_rlock(p, fd);
-  fail_unless(res == 0, "Failed to unlock fd %d: %s", fd, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to unlock fd %d: %s", fd, strerror(errno));
   (void) passwd_update_ulock(p, fd);
 }
 END_TEST
@@ -107,23 +107,23 @@ START_TEST (lock_wlock_test) {
 
   mark_point();
   res = passwd_update_wlock(NULL, -1);
-  fail_unless(res < 0, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   fd = -1;
 
   mark_point();
   res = passwd_update_wlock(p, fd);
-  fail_unless(res < 0, "Failed to handle bad fd");
-  fail_unless(errno == EBADF, "Expected EBADF (%d), got %s (%d)", EBADF,
+  ck_assert_msg(res < 0, "Failed to handle bad fd");
+  ck_assert_msg(errno == EBADF, "Expected EBADF (%d), got %s (%d)", EBADF,
     strerror(errno), errno);
 
   fd = 0;
 
   mark_point();
   res = passwd_update_wlock(p, fd);
-  fail_unless(res == 0, "Failed to unlock fd %d: %s", fd, strerror(errno));
+  ck_assert_msg(res == 0, "Failed to unlock fd %d: %s", fd, strerror(errno));
   (void) passwd_update_ulock(p, fd);
 }
 END_TEST

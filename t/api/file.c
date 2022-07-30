@@ -1,6 +1,6 @@
 /*
  * ProFTPD - mod_passwd_update API testsuite
- * Copyright (c) 2021 TJ Saunders <tj@castaglia.org>
+ * Copyright (c) 2021-2022 TJ Saunders <tj@castaglia.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,20 +53,17 @@ static void tear_down(void) {
 
 START_TEST (file_get_entry_test) {
   struct passwd *pwd;
-  pr_fh_t *fh;
-  const char *user;
-  int flags;
 
   mark_point();
   pwd = passwd_update_file_get_entry(NULL, NULL, NULL, 0);
-  fail_unless(pwd == NULL, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(pwd == NULL, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   pwd = passwd_update_file_get_entry(p, NULL, NULL, 0);
-  fail_unless(pwd == NULL, "Failed to handle null fh");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(pwd == NULL, "Failed to handle null fh");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 }
 END_TEST
@@ -76,14 +73,14 @@ START_TEST (file_add_entry_test) {
 
   mark_point();
   res = passwd_update_file_add_entry(NULL, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   res = passwd_update_file_add_entry(p, NULL, NULL);
-  fail_unless(res < 0, "Failed to handle null fh");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(res < 0, "Failed to handle null fh");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 }
 END_TEST

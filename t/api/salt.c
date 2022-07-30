@@ -1,6 +1,6 @@
 /*
  * ProFTPD - mod_passwd_update API testsuite
- * Copyright (c) 2021 TJ Saunders <tj@castaglia.org>
+ * Copyright (c) 2021-2022 TJ Saunders <tj@castaglia.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,14 +57,14 @@ START_TEST (salt_invalid_args_test) {
 
   mark_point();
   salt = passwd_update_get_salt(NULL, 0);
-  fail_unless(salt == NULL, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(salt == NULL, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   salt = passwd_update_get_salt(p, 0);
-  fail_unless(salt == NULL, "Failed to handle unknown algorithm ID");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(salt == NULL, "Failed to handle unknown algorithm ID");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 }
 END_TEST
@@ -74,9 +74,9 @@ START_TEST (salt_sha256_test) {
 
   mark_point();
   salt = passwd_update_get_salt(p, PASSWD_UPDATE_ALGO_SHA256);
-  fail_unless(salt != NULL, "Failed to generate SHA256 salt: %s",
+  ck_assert_msg(salt != NULL, "Failed to generate SHA256 salt: %s",
     strerror(errno));
-  fail_unless(strncmp(salt, prefix, 3) == 0,
+  ck_assert_msg(strncmp(salt, prefix, 3) == 0,
     "Missing expected '%s' SHA256 salt prefix", prefix);
 }
 END_TEST
@@ -86,7 +86,7 @@ START_TEST (salt_sha512_test) {
 
   mark_point();
   salt = passwd_update_get_salt(p, PASSWD_UPDATE_ALGO_DES);
-  fail_unless(salt != NULL, "Failed to generate DES salt: %s",
+  ck_assert_msg(salt != NULL, "Failed to generate DES salt: %s",
     strerror(errno));
 }
 END_TEST
@@ -96,9 +96,9 @@ START_TEST (salt_des_test) {
 
   mark_point();
   salt = passwd_update_get_salt(p, PASSWD_UPDATE_ALGO_SHA512);
-  fail_unless(salt != NULL, "Failed to generate SHA512 salt: %s",
+  ck_assert_msg(salt != NULL, "Failed to generate SHA512 salt: %s",
     strerror(errno));
-  fail_unless(strncmp(salt, prefix, 3) == 0,
+  ck_assert_msg(strncmp(salt, prefix, 3) == 0,
     "Missing expected '%s' SHA512 salt prefix", prefix);
 }
 END_TEST

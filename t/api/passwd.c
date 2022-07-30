@@ -1,6 +1,6 @@
 /*
  * ProFTPD - mod_passwd_update API testsuite
- * Copyright (c) 2021 TJ Saunders <tj@castaglia.org>
+ * Copyright (c) 2021-2022 TJ Saunders <tj@castaglia.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,32 +57,32 @@ START_TEST (passwd_get_hash_test) {
 
   mark_point();
   hash = passwd_update_get_hash(NULL, NULL, 0);
-  fail_unless(hash == NULL, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(hash == NULL, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   hash = passwd_update_get_hash(p, NULL, 0);
-  fail_unless(hash == NULL, "Failed to handle null plaintext");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(hash == NULL, "Failed to handle null plaintext");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   plaintext = "password";
 
   mark_point();
   hash = passwd_update_get_hash(p, plaintext, 0);
-  fail_unless(hash == NULL, "Failed to handle unknown algorithm ID");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(hash == NULL, "Failed to handle unknown algorithm ID");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   hash = passwd_update_get_hash(p, plaintext, PASSWD_UPDATE_ALGO_SHA256);
-  fail_unless(hash != NULL, "Failed to get SHA256 password hash: %s",
+  ck_assert_msg(hash != NULL, "Failed to get SHA256 password hash: %s",
     strerror(errno));
 
   mark_point();
   hash = passwd_update_get_hash(p, plaintext, PASSWD_UPDATE_ALGO_SHA512);
-  fail_unless(hash != NULL, "Failed to get SHA512 password hash: %s",
+  ck_assert_msg(hash != NULL, "Failed to get SHA512 password hash: %s",
     strerror(errno));
 }
 END_TEST
@@ -94,30 +94,30 @@ START_TEST (passwd_from_text_test) {
 
   mark_point();
   pwd = passwd_update_from_text(NULL, NULL, 0);
-  fail_unless(pwd == NULL, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(pwd == NULL, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   pwd = passwd_update_from_text(p, NULL, 0);
-  fail_unless(pwd == NULL, "Failed to handle null text");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(pwd == NULL, "Failed to handle null text");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   text = "foobar";
 
   mark_point();
   pwd = passwd_update_from_text(p, text, 0);
-  fail_unless(pwd == NULL, "Failed to handle zero textlen");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(pwd == NULL, "Failed to handle zero textlen");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   text_len = strlen(text);
 
   mark_point();
   pwd = passwd_update_from_text(p, text, text_len);
-  fail_unless(pwd == NULL, "Failed to handle invalid text");
-  fail_unless(errno == EPERM, "Expected EPERM (%d), got %s (%d)", EPERM,
+  ck_assert_msg(pwd == NULL, "Failed to handle invalid text");
+  ck_assert_msg(errno == EPERM, "Expected EPERM (%d), got %s (%d)", EPERM,
     strerror(errno), errno);
 
   /* XXX TODO:
@@ -129,21 +129,21 @@ START_TEST (passwd_from_text_test) {
 
   mark_point();
   pwd = passwd_update_from_text(p, text, text_len);
-  fail_unless(pwd != NULL, "Failed to handle valid text: %s", strerror(errno));
-  fail_unless(strcmp(pwd->pw_name, "test") == 0,
+  ck_assert_msg(pwd != NULL, "Failed to handle valid text: %s", strerror(errno));
+  ck_assert_msg(strcmp(pwd->pw_name, "test") == 0,
     "Expected pw_name 'test', got '%s'", pwd->pw_name);
-  fail_unless(strcmp(pwd->pw_passwd, "enterpasswordhashhere") == 0,
+  ck_assert_msg(strcmp(pwd->pw_passwd, "enterpasswordhashhere") == 0,
     "Expected pw_passwd 'enterpasswordhashhere', got '%s'",
     pwd->pw_passwd);
-  fail_unless(pwd->pw_uid == (uid_t) 1, "Expected pw_uid 1, got %lu",
+  ck_assert_msg(pwd->pw_uid == (uid_t) 1, "Expected pw_uid 1, got %lu",
     (unsigned long) pwd->pw_uid);
-  fail_unless(pwd->pw_gid == (gid_t) 1, "Expected pw_gid 1, got %lu",
+  ck_assert_msg(pwd->pw_gid == (gid_t) 1, "Expected pw_gid 1, got %lu",
     (unsigned long) pwd->pw_gid);
-  fail_unless(strcmp(pwd->pw_gecos, "") == 0,
+  ck_assert_msg(strcmp(pwd->pw_gecos, "") == 0,
     "Expected pw_gecos '', got '%s'", pwd->pw_gecos);
-  fail_unless(strcmp(pwd->pw_dir, "/home/test") == 0,
+  ck_assert_msg(strcmp(pwd->pw_dir, "/home/test") == 0,
     "Expected pw_dir '/home/test', got '%s'", pwd->pw_dir);
-  fail_unless(strcmp(pwd->pw_shell, "/bin/bash") == 0,
+  ck_assert_msg(strcmp(pwd->pw_shell, "/bin/bash") == 0,
     "Expected pw_shell '/bin/bash', got '%s'", pwd->pw_shell);
 }
 END_TEST
@@ -154,30 +154,30 @@ START_TEST (passwd_to_text_test) {
 
   mark_point();
   text = passwd_update_to_text(NULL, NULL);
-  fail_unless(text == NULL, "Failed to handle null pool");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(text == NULL, "Failed to handle null pool");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   mark_point();
   text = passwd_update_to_text(p, NULL);
-  fail_unless(text == NULL, "Failed to handle null passwd");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(text == NULL, "Failed to handle null passwd");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   memset(&pwd, 0, sizeof(pwd));
 
   mark_point();
   text = passwd_update_to_text(p, &pwd);
-  fail_unless(text == NULL, "Failed to handle null pw_name");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(text == NULL, "Failed to handle null pw_name");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   pwd.pw_name = "test";
 
   mark_point();
   text = passwd_update_to_text(p, &pwd);
-  fail_unless(text == NULL, "Failed to handle null pw_passwd");
-  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+  ck_assert_msg(text == NULL, "Failed to handle null pw_passwd");
+  ck_assert_msg(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
     strerror(errno), errno);
 
   /* All other fields are largely optional. */
@@ -192,8 +192,8 @@ START_TEST (passwd_to_text_test) {
 
   mark_point();
   text = passwd_update_to_text(p, &pwd);
-  fail_unless(text != NULL, "Failed to handle pwd: %s", strerror(errno));
-  fail_unless(strcmp(text, expected) == 0, "Expected '%s', got '%s'",
+  ck_assert_msg(text != NULL, "Failed to handle pwd: %s", strerror(errno));
+  ck_assert_msg(strcmp(text, expected) == 0, "Expected '%s', got '%s'",
     expected, text);
 }
 END_TEST

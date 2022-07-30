@@ -689,9 +689,9 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-enable_tests
 with_includes
 with_libraries
+enable_tests
 '
       ac_precious_vars='build_alias
 host_alias
@@ -3600,6 +3600,38 @@ $as_echo "no" >&6; }
 fi
 
 
+
+# Check whether --with-includes was given.
+if test "${with_includes+set}" = set; then :
+  withval=$with_includes;  ac_addl_includes=`echo "$withval" | sed -e 's/:/ /g'` ;
+    for ainclude in $ac_addl_includes; do
+      if test x"$ac_build_addl_includes" = x ; then
+        ac_build_addl_includes="-I$ainclude"
+      else
+        ac_build_addl_includes="-I$ainclude $ac_build_addl_includes"
+      fi
+    done
+    CPPFLAGS="$CPPFLAGS $ac_build_addl_includes"
+
+fi
+
+
+
+# Check whether --with-libraries was given.
+if test "${with_libraries+set}" = set; then :
+  withval=$with_libraries;  ac_addl_libdirs=`echo "$withval" | sed -e 's/:/ /g'` ;
+    for alibdir in $ac_addl_libdirs; do
+      if test x"$ac_build_addl_libdirs" = x ; then
+        ac_build_addl_libdirs="-L$alibdir"
+      else
+        ac_build_addl_libdirs="-L$alibdir $ac_build_addl_libdirs"
+      fi
+    done
+    LDFLAGS="$LDFLAGS $ac_build_addl_libdirs"
+
+fi
+
+
 ENABLE_TESTS="\"\""
 # Check whether --enable-tests was given.
 if test "${enable_tests+set}" = set; then :
@@ -3668,38 +3700,6 @@ else
 fi
 
     fi
-
-fi
-
-
-
-# Check whether --with-includes was given.
-if test "${with_includes+set}" = set; then :
-  withval=$with_includes;  ac_addl_includes=`echo "$withval" | sed -e 's/:/ /g'` ;
-    for ainclude in $ac_addl_includes; do
-      if test x"$ac_build_addl_includes" = x ; then
-        ac_build_addl_includes="-I$ainclude"
-      else
-        ac_build_addl_includes="-I$ainclude $ac_build_addl_includes"
-      fi
-    done
-    CPPFLAGS="$CPPFLAGS $ac_build_addl_includes"
-
-fi
-
-
-
-# Check whether --with-libraries was given.
-if test "${with_libraries+set}" = set; then :
-  withval=$with_libraries;  ac_addl_libdirs=`echo "$withval" | sed -e 's/:/ /g'` ;
-    for alibdir in $ac_addl_libdirs; do
-      if test x"$ac_build_addl_libdirs" = x ; then
-        ac_build_addl_libdirs="-L$alibdir"
-      else
-        ac_build_addl_libdirs="-L$alibdir $ac_build_addl_libdirs"
-      fi
-    done
-    LDFLAGS="$LDFLAGS $ac_build_addl_libdirs"
 
 fi
 
