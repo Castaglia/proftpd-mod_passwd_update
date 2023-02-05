@@ -22,11 +22,13 @@ jobs:
 
     steps:
       - name: Checkout ProFTPD
-        run: |
-          git clone --depth 1 https://github.com/proftpd/proftpd.git proftpd
+        uses: actions/checkout@v3
+        with:
+          repository: proftpd/proftpd
+          path: proftpd
 
       - name: Checkout module source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: proftpd/contrib/mod_passwd_update
 
