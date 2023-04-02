@@ -50,7 +50,7 @@ int passwd_update_rlock(pool *p, int fd) {
   lock.l_type = F_RDLCK;
   lock.l_whence = 0;
   lock.l_start = lock.l_len = 0;
- 
+
   res = fcnctl(fd, F_SETLKW, &lock);
   xerrno = errno;
 
@@ -95,7 +95,7 @@ int passwd_update_wlock(pool *p, int fd) {
   lock.l_type = F_WRLCK;
   lock.l_whence = 0;
   lock.l_start = lock.l_len = 0;
- 
+
   res = fcnctl(fd, F_SETLKW, &lock);
   xerrno = errno;
 
