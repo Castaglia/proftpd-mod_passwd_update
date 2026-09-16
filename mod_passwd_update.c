@@ -1,6 +1,6 @@
 /*
  * ProFTPD - mod_passwd_update
- * Copyright (c) 2021-2022 TJ Saunders
+ * Copyright (c) 2021-2026 TJ Saunders
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,8 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Suite 500, Boston, MA 02110-1335, USA.
+ * along with this program; if not, see <https://www.gnu.org/licenses/>.
  *
  * As a special exemption, TJ Saunders and other respective copyright holders
  * give permission to link this program with OpenSSL, and distribute the
@@ -241,6 +240,7 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
   int flags, res, xerrno;
   struct passwd *pwd;
   unsigned int algo_count, *algos;
+  size_t max_passwd_len = PR_TUNABLE_PASSWORD_MAX;
 
   if (passwd_update_engine == FALSE) {
     return PR_DECLINED(cmd);
@@ -342,6 +342,29 @@ MODRET passwd_update_pre_pass(cmd_rec *cmd) {
           "client sent empty password, ignoring PASS command");
         return PR_DECLINED(cmd);
       }
+    }
+  }
+
+  c = find_config(main_server->conf, CONF_PARAM, "MaxPasswordSize", FALSE);
+  if (c != NULL) {
+    max_passwd_len = *((size_t *) c->argv[0]);
+  }
+
+  if (max_passwd_len > 0) {
+    size_t passwd_len = 0;
+
+    if (cmd->argc > 1 &&
+        cmd->arg != NULL) {
+      passwd_len = strlen(cmd->arg);
+    }
+
+    if (passwd_len > max_passwd_len) {
+      /* Let other modules deal with this. */
+      pr_trace_msg(trace_channel, 9,
+        "client-sent password length (%lu) exceeds maximum (%lu), "
+        "ignoring PASS command", (unsigned long) passwd_len,
+        (unsigned long) max_passwd_len);
+      return PR_DECLINED(cmd);
     }
   }
 
