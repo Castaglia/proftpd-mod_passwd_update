@@ -24,6 +24,11 @@ my $TESTS = {
     test_class => [qw(forking)],
   },
 
+  passwd_update_pass_before_user => {
+    order => ++$order,
+    test_class => [qw(forking)],
+  },
+
   passwd_update_bad_password => {
     order => ++$order,
     test_class => [qw(forking)],
@@ -58,6 +63,22 @@ my $TESTS = {
     order => ++$order,
     test_class => [qw(forking mod_sftp)],
   },
+
+  passwd_update_config_allowemptypasswords_off => {
+    order => ++$order,
+    test_class => [qw(forking)],
+  },
+
+  passwd_update_config_maxpasswordsize => {
+    order => ++$order,
+    test_class => [qw(forking)],
+  },
+
+  passwd_update_config_maxpasswordsize_default => {
+    order => ++$order,
+    test_class => [qw(forking)],
+  },
+
 };
 
 sub new {
@@ -221,10 +242,143 @@ sub passwd_update_unknown_user {
     }
   };
   if ($@) {
-    $ex = $@;
+    $ex = $@ unless $ex;
   }
 
-  test_cleanup($setup->{log_file}, $ex);
+  test_cleanup($setup, $ex);
+}
+
+sub passwd_update_pass_before_user {
+  my $self = shift;
+  my $tmpdir = $self->{tmpdir};
+  my $setup = test_setup($tmpdir, 'passwd_update');
+
+  my $new_auth_user_file = $setup->{auth_user_file};
+  $new_auth_user_file .= '.new';
+
+  my $config = {
+    PidFile => $setup->{pid_file},
+    ScoreboardFile => $setup->{scoreboard_file},
+    SystemLog => $setup->{log_file},
+    TraceLog => $setup->{log_file},
+    Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
+
+    AuthGroupFile => $setup->{auth_group_file},
+
+    IfModules => {
+      'mod_delay.c' => {
+        DelayEngine => 'off',
+      },
+
+      'mod_passwd_update.c' => {
+        PasswordUpdateEngine => 'on',
+        PasswordUpdateLog => $setup->{log_file},
+        PasswordUpdateAuthUserFiles => "$setup->{auth_user_file} $new_auth_user_file",
+      },
+    },
+  };
+
+  my ($port, $config_user, $config_group) = config_write($setup->{config_file},
+    $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
+
+  # Open pipes, for use between the parent and child processes.  Specifically,
+  # the child will indicate when it's done with its test by writing a message
+  # to the parent.
+  my ($rfh, $wfh);
+  unless (pipe($rfh, $wfh)) {
+    die("Can't open pipe: $!");
+  }
+
+  my $ex;
+
+  # Fork child
+  $self->handle_sigchld();
+  defined(my $pid = fork()) or die("Can't fork: $!");
+  if ($pid) {
+    eval {
+      sleep(1);
+
+      my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
+      eval { $client->pass($setup->{passwd}) };
+      unless ($@) {
+        die("PASS succeeded unexpectedly");
+      }
+
+      my $resp_code = $client->response_code();
+      my $resp_msg = $client->response_msg();
+      $client->quit();
+
+      my $expected = 503;
+      $self->assert($resp_code == $expected,
+        test_msg("Expected response code $expected, got $resp_code"));
+
+      $expected = 'Login with USER first';
+      $self->assert($resp_msg eq $expected,
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
+    };
+    if ($@) {
+      $ex = $@;
+    }
+
+    $wfh->print("done\n");
+    $wfh->flush();
+
+  } else {
+    eval { server_wait($setup->{config_file}, $rfh) };
+    if ($@) {
+      warn($@);
+      exit 1;
+    }
+
+    exit 0;
+  }
+
+  # Stop server
+  server_stop($setup->{pid_file});
+  $self->assert_child_ok($pid);
+
+  eval {
+    if (open(my $fh, "< $setup->{log_file}")) {
+      my $ok = 0;
+
+      while (my $line = <$fh>) {
+        chomp($line);
+
+        if ($ENV{TEST_VERBOSE}) {
+          print STDERR "# $line\n";
+        }
+
+        if ($line =~ /client has not sent USER command/) {
+          $ok = 1;
+          last;
+        }
+      }
+
+      close($fh);
+
+      $self->assert($ok,
+        test_msg("Did not see expected 'has not sent USER' log messages"));
+
+    } else {
+      die("Can't read $setup->{log_file}: $!");
+    }
+  };
+  if ($@) {
+    $ex = $@ unless $ex;
+  }
+
+  test_cleanup($setup, $ex);
 }
 
 sub passwd_update_bad_password {
@@ -344,10 +498,10 @@ sub passwd_update_bad_password {
     }
   };
   if ($@) {
-    $ex = $@;
+    $ex = $@ unless $ex;
   }
 
-  test_cleanup($setup->{log_file}, $ex);
+  test_cleanup($setup, $ex);
 }
 
 sub passwd_update_algo_sha256 {
@@ -475,10 +629,10 @@ sub passwd_update_algo_sha256 {
     }
   };
   if ($@) {
-    $ex = $@;
+    $ex = $@ unless $ex;
   }
 
-  test_cleanup($setup->{log_file}, $ex);
+  test_cleanup($setup, $ex);
 }
 
 sub passwd_update_algo_sha512 {
@@ -606,10 +760,10 @@ sub passwd_update_algo_sha512 {
     }
   };
   if ($@) {
-    $ex = $@;
+    $ex = $@ unless $ex;
   }
 
-  test_cleanup($setup->{log_file}, $ex);
+  test_cleanup($setup, $ex);
 }
 
 sub passwd_update_algo_des {
@@ -731,10 +885,10 @@ sub passwd_update_algo_des {
     }
   };
   if ($@) {
-    $ex = $@;
+    $ex = $@ unless $ex;
   }
 
-  test_cleanup($setup->{log_file}, $ex);
+  test_cleanup($setup, $ex);
 }
 
 sub passwd_update_authorder_without_auth_file {
@@ -862,10 +1016,10 @@ sub passwd_update_authorder_without_auth_file {
     }
   };
   if ($@) {
-    $ex = $@;
+    $ex = $@ unless $ex;
   }
 
-  test_cleanup($setup->{log_file}, $ex);
+  test_cleanup($setup, $ex);
 }
 
 sub passwd_update_sftp_ignore_publickey_auth {
@@ -1000,10 +1154,10 @@ sub passwd_update_sftp_ignore_publickey_auth {
     }
   };
   if ($@) {
-    $ex = $@;
+    $ex = $@ unless $ex;
   }
 
-  test_cleanup($setup->{log_file}, $ex);
+  test_cleanup($setup, $ex);
 }
 
 sub passwd_update_sftp_handle_password_auth {
@@ -1168,10 +1322,418 @@ sub passwd_update_sftp_handle_password_auth {
     }
   };
   if ($@) {
-    $ex = $@;
+    $ex = $@ unless $ex;
   }
 
-  test_cleanup($setup->{log_file}, $ex);
+  test_cleanup($setup, $ex);
+}
+
+sub passwd_update_config_allowemptypasswords_off {
+  my $self = shift;
+  my $tmpdir = $self->{tmpdir};
+  my $setup = test_setup($tmpdir, 'passwd_update');
+
+  my $new_auth_user_file = $setup->{auth_user_file};
+  $new_auth_user_file .= '.new';
+
+  my $config = {
+    PidFile => $setup->{pid_file},
+    ScoreboardFile => $setup->{scoreboard_file},
+    SystemLog => $setup->{log_file},
+    TraceLog => $setup->{log_file},
+    Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
+
+    AuthGroupFile => $setup->{auth_group_file},
+    AllowEmptyPasswords => 'off',
+
+    IfModules => {
+      'mod_delay.c' => {
+        DelayEngine => 'off',
+      },
+
+      'mod_passwd_update.c' => {
+        PasswordUpdateEngine => 'on',
+        PasswordUpdateLog => $setup->{log_file},
+        PasswordUpdateAuthUserFiles => "$setup->{auth_user_file} $new_auth_user_file",
+      },
+    },
+  };
+
+  my ($port, $config_user, $config_group) = config_write($setup->{config_file},
+    $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
+
+  # Open pipes, for use between the parent and child processes.  Specifically,
+  # the child will indicate when it's done with its test by writing a message
+  # to the parent.
+  my ($rfh, $wfh);
+  unless (pipe($rfh, $wfh)) {
+    die("Can't open pipe: $!");
+  }
+
+  my $ex;
+
+  # Fork child
+  $self->handle_sigchld();
+  defined(my $pid = fork()) or die("Can't fork: $!");
+  if ($pid) {
+    eval {
+      sleep(1);
+
+      my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
+      eval { $client->login($setup->{user}, '') };
+      unless ($@) {
+        die("Login succeeded unexpectedly");
+      }
+
+      my $resp_code = $client->response_code();
+      my $resp_msg = $client->response_msg();
+      $client->quit();
+
+      my $expected = 501;
+      $self->assert($resp_code == $expected,
+        test_msg("Expected response code $expected, got $resp_code"));
+
+      $expected = 'Login incorrect.';
+      $self->assert($resp_msg eq $expected,
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
+    };
+    if ($@) {
+      $ex = $@;
+    }
+
+    $wfh->print("done\n");
+    $wfh->flush();
+
+  } else {
+    eval { server_wait($setup->{config_file}, $rfh) };
+    if ($@) {
+      warn($@);
+      exit 1;
+    }
+
+    exit 0;
+  }
+
+  # Stop server
+  server_stop($setup->{pid_file});
+  $self->assert_child_ok($pid);
+
+  eval {
+    if (open(my $fh, "< $setup->{log_file}")) {
+      my $ok = 0;
+
+      while (my $line = <$fh>) {
+        chomp($line);
+
+        if ($ENV{TEST_VERBOSE}) {
+          print STDERR "# $line\n";
+        }
+
+        if ($line =~ /client sent empty password/) {
+          $ok = 1;
+          last;
+        }
+      }
+
+      close($fh);
+
+      $self->assert($ok,
+        test_msg("Did not see expected 'sent empty password' log messages"));
+
+    } else {
+      die("Can't read $setup->{log_file}: $!");
+    }
+  };
+  if ($@) {
+    $ex = $@ unless $ex;
+  }
+
+  test_cleanup($setup, $ex);
+}
+
+sub passwd_update_config_maxpasswordsize {
+  my $self = shift;
+  my $tmpdir = $self->{tmpdir};
+  my $setup = test_setup($tmpdir, 'passwd_update');
+
+  my $new_auth_user_file = $setup->{auth_user_file};
+  $new_auth_user_file .= '.new';
+
+  my $config = {
+    PidFile => $setup->{pid_file},
+    ScoreboardFile => $setup->{scoreboard_file},
+    SystemLog => $setup->{log_file},
+    TraceLog => $setup->{log_file},
+    Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
+
+    AuthGroupFile => $setup->{auth_group_file},
+
+    # This is too short, IMHO, but it makes the testing easier
+    MaxPasswordSize => '2',
+
+    IfModules => {
+      'mod_delay.c' => {
+        DelayEngine => 'off',
+      },
+
+      'mod_passwd_update.c' => {
+        PasswordUpdateEngine => 'on',
+        PasswordUpdateLog => $setup->{log_file},
+        PasswordUpdateAuthUserFiles => "$setup->{auth_user_file} $new_auth_user_file",
+      },
+    },
+  };
+
+  my ($port, $config_user, $config_group) = config_write($setup->{config_file},
+    $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
+
+  # Open pipes, for use between the parent and child processes.  Specifically,
+  # the child will indicate when it's done with its test by writing a message
+  # to the parent.
+  my ($rfh, $wfh);
+  unless (pipe($rfh, $wfh)) {
+    die("Can't open pipe: $!");
+  }
+
+  my $ex;
+
+  # Fork child
+  $self->handle_sigchld();
+  defined(my $pid = fork()) or die("Can't fork: $!");
+  if ($pid) {
+    eval {
+      sleep(1);
+
+      my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
+      eval { $client->login($setup->{user}, $setup->{passwd}) };
+      unless ($@) {
+        die("Login succeeded unexpectedly");
+      }
+
+      # Even though we use the correct password, we expect this login to
+      # because, due to the MaxPasswordSize setting, the updated entry
+      # is not written to the in-use AuthUserFile, thus failure.
+      my $resp_code = $client->response_code();
+      my $resp_msg = $client->response_msg();
+      $client->quit();
+
+      my $expected = 530;
+      $self->assert($resp_code == $expected,
+        test_msg("Expected response code $expected, got $resp_code"));
+
+      $expected = 'Login incorrect.';
+      $self->assert($resp_msg eq $expected,
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
+    };
+    if ($@) {
+      $ex = $@;
+    }
+
+    $wfh->print("done\n");
+    $wfh->flush();
+
+  } else {
+    eval { server_wait($setup->{config_file}, $rfh) };
+    if ($@) {
+      warn($@);
+      exit 1;
+    }
+
+    exit 0;
+  }
+
+  # Stop server
+  server_stop($setup->{pid_file});
+  $self->assert_child_ok($pid);
+
+  eval {
+    if (open(my $fh, "< $setup->{log_file}")) {
+      my $ok = 0;
+
+      while (my $line = <$fh>) {
+        chomp($line);
+
+        if ($ENV{TEST_VERBOSE}) {
+          print STDERR "# $line\n";
+        }
+
+        if ($line =~ /client-sent password length/) {
+          $ok = 1;
+          last;
+        }
+      }
+
+      close($fh);
+
+      $self->assert($ok,
+        test_msg("Did not see expected 'client-sent password length' log messages"));
+
+    } else {
+      die("Can't read $setup->{log_file}: $!");
+    }
+  };
+  if ($@) {
+    $ex = $@ unless $ex;
+  }
+
+  test_cleanup($setup, $ex);
+}
+
+sub passwd_update_config_maxpasswordsize_default {
+  my $self = shift;
+  my $tmpdir = $self->{tmpdir};
+  my $setup = test_setup($tmpdir, 'passwd_update');
+
+  my $new_auth_user_file = $setup->{auth_user_file};
+  $new_auth_user_file .= '.new';
+
+  my $bad_passwd = 'Ab' x 1024;
+
+  my $config = {
+    PidFile => $setup->{pid_file},
+    ScoreboardFile => $setup->{scoreboard_file},
+    SystemLog => $setup->{log_file},
+    TraceLog => $setup->{log_file},
+    Trace => 'passwd_update:20 passwd_update.file:20 passwd_update.lock:20 passwd_update.passwd:20 passwd_update.salt:20',
+
+    AuthGroupFile => $setup->{auth_group_file},
+
+    IfModules => {
+      'mod_delay.c' => {
+        DelayEngine => 'off',
+      },
+
+      'mod_passwd_update.c' => {
+        PasswordUpdateEngine => 'on',
+        PasswordUpdateLog => $setup->{log_file},
+        PasswordUpdateAuthUserFiles => "$setup->{auth_user_file} $new_auth_user_file",
+      },
+    },
+  };
+
+  my ($port, $config_user, $config_group) = config_write($setup->{config_file},
+    $config);
+
+  # Order of directives matters here, thus why we add these lines last.
+  if (open(my $fh, ">> $setup->{config_file}")) {
+    print $fh "AuthUserFile $new_auth_user_file\n";
+    unless (close($fh)) {
+      die("Can't write $setup->{config_file}: $!");
+    }
+
+  } else {
+    die("Can't open $setup->{config_file}: $!");
+  }
+
+  # Open pipes, for use between the parent and child processes.  Specifically,
+  # the child will indicate when it's done with its test by writing a message
+  # to the parent.
+  my ($rfh, $wfh);
+  unless (pipe($rfh, $wfh)) {
+    die("Can't open pipe: $!");
+  }
+
+  my $ex;
+
+  # Fork child
+  $self->handle_sigchld();
+  defined(my $pid = fork()) or die("Can't fork: $!");
+  if ($pid) {
+    eval {
+      sleep(1);
+
+      my $client = ProFTPD::TestSuite::FTP->new('127.0.0.1', $port);
+      eval { $client->login($setup->{user}, $bad_passwd) };
+      unless ($@) {
+        die("Login succeeded unexpectedly");
+      }
+
+      my $resp_code = $client->response_code();
+      my $resp_msg = $client->response_msg();
+      $client->quit();
+
+      my $expected = 530;
+      $self->assert($resp_code == $expected,
+        test_msg("Expected response code $expected, got $resp_code"));
+
+      $expected = 'Login incorrect.';
+      $self->assert($resp_msg eq $expected,
+        test_msg("Expected response message '$expected', got '$resp_msg'"));
+    };
+    if ($@) {
+      $ex = $@;
+    }
+
+    $wfh->print("done\n");
+    $wfh->flush();
+
+  } else {
+    eval { server_wait($setup->{config_file}, $rfh) };
+    if ($@) {
+      warn($@);
+      exit 1;
+    }
+
+    exit 0;
+  }
+
+  # Stop server
+  server_stop($setup->{pid_file});
+  $self->assert_child_ok($pid);
+
+  eval {
+    if (open(my $fh, "< $setup->{log_file}")) {
+      my $ok = 0;
+
+      while (my $line = <$fh>) {
+        chomp($line);
+
+        if ($ENV{TEST_VERBOSE}) {
+          print STDERR "# $line\n";
+        }
+
+        if ($line =~ /client-sent password length/) {
+          $ok = 1;
+          last;
+        }
+      }
+
+      close($fh);
+
+      $self->assert($ok,
+        test_msg("Did not see expected 'client-sent password length' log messages"));
+
+    } else {
+      die("Can't read $setup->{log_file}: $!");
+    }
+  };
+  if ($@) {
+    $ex = $@ unless $ex;
+  }
+
+  test_cleanup($setup, $ex);
 }
 
 1;
